@@ -14,20 +14,34 @@ any pass can crash and a successor rehydrates entirely from status + comments.
    parses without an LLM, and a human-readable markdown body.
 4. Labels are optional enrichment (mapped via taxonomy), never load-bearing state.
 
-## 2. Comment format
+## 2. Comment format (v2)
 
-```markdown
-<!-- marsh:TYPE {"v":1,"pass":"<station>","issue":"ENG-123","status":"DONE","attempt":1,"refs":{}} -->
-
+````markdown
 ## <Human-readable heading>
 
 <body>
-```
 
-- The HTML comment is invisible in Linear's UI; humans see only the body.
+```marsh
+{"v":2,"type":"<TYPE>","pass":"<station>","status":"DONE","attempt":1,"refs":{}}
+```
+````
+
+- The machine header is a fenced code block with the `marsh` info string,
+  placed at the **end** of the comment: humans read the body first, the
+  dispatcher parses the tail.
+- **Why a fence, not an HTML comment** (v1 lesson, 2026-07-23): Linear renders
+  `<!-- -->` as literal text, and auto-expands bare issue identifiers in plain
+  text into inline mentions — which corrupts embedded JSON. Fences render
+  cleanly and suppress entity expansion.
+- **Never put bare issue identifiers, URLs-as-mentions, or `@names` in the
+  header.** There is no `issue` field — the comment lives on the issue.
+  Cross-issue references go in `refs` as quoted strings.
 - `status` uses the typed exit vocabulary: `DONE | DONE_WITH_CONCERNS |
-  NEEDS_CONTEXT | BLOCKED` (plus `PROPOSED` for artifacts awaiting a gate).
+  NEEDS_CONTEXT | BLOCKED` (plus `PROPOSED` for artifacts awaiting a gate,
+  `STARTED` for pass-open entries).
 - `refs` may carry branch, PR URL, worktree, report paths, evidence links.
+- Parsing: last ```` ```marsh ```` fence in the comment body; v1 HTML-comment
+  headers may exist in comments from 2026-07-23 — treat as legacy, best-effort.
 
 ## 3. Comment types
 
@@ -63,7 +77,7 @@ any pass can crash and a successor rehydrates entirely from status + comments.
 |---|---|---|
 | triage | backlog / unstarted | triage pass accepts + routes |
 | triage | canceled / duplicate | **proposed only** — human confirms |
-| unstarted | started | build pass claims the issue (assignee/delegate set to Marsh identity) |
+| unstarted | started | build pass claims the issue — the claim is atomic: status AND assignee/delegate both update to the Marsh identity (or the operator, pre-identity). If the issue is currently assigned to another human, do not claim silently: post `marsh:elicitation` to confirm takeover, and on approval record the prior assignee in the ledger entry |
 | started | In Review (started-type) | egress: draft PR open, verification posted |
 | any | — | Marsh never marks `completed`; merge + completion are human acts |
 
