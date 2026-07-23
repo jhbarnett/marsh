@@ -1,0 +1,19 @@
+{
+  "name": "marsh",
+  "owner": {
+    "name": "Jason Barnett",
+    "email": "jason@fitrankings.com"
+  },
+  "metadata": {
+    "description": "Local marketplace for Marsh, the autonomous task-factory teammate",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "marsh",
+      "source": "./plugins/marsh",
+      "description": "Autonomous Linear task-factory: triage, plan, build, verify, ship — with risk-scaled gates and typed escalation",
+      "version": "0.1.0"
+    }
+  ]
+}

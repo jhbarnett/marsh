@@ -1,0 +1,22 @@
+# Instance configuration — yours, not the library's (examples are tracked)
+config/registry.json
+config/policy.json
+config/taxonomy.json
+
+# Disposable working memory — regenerated from the ledger
+var/
+*.db
+*.db-journal
+*.sqlite
+
+# Workbench cards — single-operator in-flight state
+workbench/cards/
+
+# Instance outputs
+reports/
+artifacts/
+
+# OS / scratch
+.DS_Store
+*.local.md
+*.local.json

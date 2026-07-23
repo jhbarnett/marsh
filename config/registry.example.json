@@ -1,0 +1,33 @@
+{
+  "workspace": "YourWorkspace",
+  "workspaceRoot": "/path/to/your/repos",
+  "repos": {
+    "your-backend": {
+      "path": "/path/to/your/repos/your-backend",
+      "baseBranch": "main",
+      "domains": ["backend", "api", "db"],
+      "teams": ["Engineering"],
+      "verify": {
+        "gate": "make verify",
+        "test": "make test",
+        "lint": "make lint",
+        "types": "make typecheck"
+      },
+      "worktrees": true,
+      "notes": "The `gate` command is the canonical agent Stop-gate: fast, runs on changed files, must pass before any build pass may exit. Heavier suites belong under separate keys and run at finish time."
+    },
+    "your-frontend": {
+      "path": "/path/to/your/repos/your-frontend",
+      "baseBranch": "main",
+      "domains": ["frontend"],
+      "teams": ["Engineering"],
+      "verify": {
+        "gate": "npm run verify",
+        "test": "npm test",
+        "lint": "npm run lint"
+      },
+      "worktrees": true,
+      "notes": "Anything an agent must know before touching this repo (env vars, bootstrap steps for fresh worktrees, credential caveats — and what to do when they fail: escalate, never work around)."
+    }
+  }
+}

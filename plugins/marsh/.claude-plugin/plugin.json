@@ -1,0 +1,10 @@
+{
+  "name": "marsh",
+  "description": "Autonomous Linear task-factory teammate — triages, plans, builds, verifies, and ships work with risk-scaled human gates",
+  "version": "0.1.0",
+  "author": {
+    "name": "Jason Barnett",
+    "email": "jason@fitrankings.com"
+  },
+  "keywords": ["linear", "orchestration", "task-factory", "autonomous", "workflow"]
+}

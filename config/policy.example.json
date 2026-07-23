@@ -1,0 +1,64 @@
+{
+  "lanes": {
+    "dev": { "substrate": "worktree", "wip": 3, "wipMax": 5 },
+    "planning": { "substrate": "none", "wip": 4 },
+    "discovery": { "substrate": "none", "wip": 2 },
+    "gardening": { "substrate": "none", "wip": 1 }
+  },
+  "gates": {
+    "default": { "planApproval": "human", "prReview": "human" },
+    "byShape": {
+      "layup": { "planApproval": "adversarial", "prReview": "human" },
+      "docs": { "planApproval": "adversarial", "prReview": "human" },
+      "spike": { "planApproval": "adversarial", "prReview": "none", "output": "document" },
+      "epic": { "action": "decompose", "maxDepth": 1 }
+    },
+    "byRiskClass": {
+      "security": { "planApproval": "human", "prReview": "human", "extraVerifiers": ["security-analyst"] },
+      "infra": { "planApproval": "human", "prReview": "human" }
+    }
+  },
+  "riskClasses": {
+    "alwaysHuman": ["security", "auth", "migrations", "infra", "billing", "tenant-scoping"],
+    "protectedPaths": [
+      "**/migrations/**",
+      "**/auth/**",
+      "**/settings/**",
+      "compose/**",
+      ".github/workflows/**"
+    ],
+    "selfProtectedPaths": [
+      "config/**",
+      "plugins/marsh/hooks/**",
+      "protocol.md"
+    ]
+  },
+  "escalation": {
+    "maxAttemptsPerStation": 2,
+    "ladder": ["enrich-context", "change-approach", "decompose", "human"]
+  },
+  "budgets": {
+    "perShiftTokens": 2000000,
+    "perIssueTokens": 500000,
+    "modelTiers": {
+      "triage": "sonnet",
+      "extract": "sonnet",
+      "build": "inherit",
+      "judge": "inherit",
+      "verify": "inherit"
+    }
+  },
+  "witness": {
+    "stuckThresholdHours": {
+      "started": 24,
+      "inReview": 72,
+      "elicitation": 48,
+      "parked": 96
+    },
+    "action": "escalate"
+  },
+  "merge": {
+    "authority": "human",
+    "refinery": { "strategy": "rebase-sequential", "conflictAction": "route-to-owner" }
+  }
+}
