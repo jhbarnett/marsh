@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """Project a ledger snapshot into workbench cards.
 
-Usage: project_cards.py <snapshot.json> [--cards-dir workbench/cards]
+Usage: project_cards.py <snapshot.json> [--cards-dir workbench/cards] [--prune-done-days N]
+
+Reconciliation contract (stale-card guard): the snapshot for a full-board
+refresh MUST include every issue that already has a card (read the cards dir
+first and fetch those issues too) plus all active issues — a card whose issue
+closed since the last projection is otherwise never re-projected.
+--prune-done-days N deletes cards in the done column whose `updated` is older
+than N days (their canonical state lives in Linear; the card is just a view).
 
 The snapshot is produced by a Marsh command from Linear state:
   [{"identifier","title","team","statusName","statusType","url","labels":[],
@@ -98,13 +105,36 @@ def render(issue: dict, reply: str, log: str, now: str) -> str:
 
 
 def main() -> int:
-    if len(sys.argv) < 2:
+    argv = sys.argv[1:]
+    prune_days = 0
+    if "--prune-done-days" in argv:
+        i = argv.index("--prune-done-days")
+        prune_days = int(argv[i + 1])
+        argv = argv[:i] + argv[i + 2:]
+    if not argv:
         print(__doc__, file=sys.stderr)
         return 2
-    snapshot = json.loads(Path(sys.argv[1]).read_text())
-    cards_dir = Path(sys.argv[3] if len(sys.argv) > 3 and sys.argv[2] == "--cards-dir" else "workbench/cards")
+    snapshot = json.loads(Path(argv[0]).read_text())
+    cards_dir = Path(argv[2] if len(argv) > 2 and argv[1] == "--cards-dir" else "workbench/cards")
     cards_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    pruned = []
+    if prune_days:
+        cutoff = datetime.now(timezone.utc).timestamp() - prune_days * 86400
+        in_snapshot = {i["identifier"] for i in snapshot}
+        for card in cards_dir.glob("*.md"):
+            body = card.read_text()
+            if card.stem in in_snapshot or "column: done" not in body:
+                continue
+            m = re.search(r"^updated: (\S+)", body, re.M)
+            try:
+                ts = datetime.strptime(m.group(1), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp()
+            except (AttributeError, ValueError):
+                continue
+            if ts < cutoff and not is_real_reply(zone_text(body, REPLY_RE)):
+                card.unlink()
+                pruned.append(card.stem)
 
     pending_replies, written = [], 0
     for issue in snapshot:
@@ -119,7 +149,7 @@ def main() -> int:
         path.write_text(render(issue, reply, log, now))
         written += 1
 
-    print(json.dumps({"written": written, "pendingReplies": pending_replies}))
+    print(json.dumps({"written": written, "pendingReplies": pending_replies, "pruned": pruned}))
     return 0
 
 

@@ -313,7 +313,10 @@ clones, runs `/marsh sync`, fills `registry.json`, and tunes `policy.json`.
   verify-gate evidence artifacts.
 - **Phase 4** — full risk matrix; discovery duty (with clickable prototypes);
   Marsh identities (Linear agent app, GitHub account); scheduled shifts.
-- **Phase 5** — weakness mining and policy-tuning PRs (self-improvement).
+- **Phase 5** — weakness mining and policy-tuning PRs (self-improvement);
+  serve v2 cockpit: an Agent-SDK-hosted operator session embedded in the
+  board — streaming conversation with an input box (not just the v1
+  read-only tail), card drag-in as first-class context, terminal optional.
 
 ## 9. Research appendix
 

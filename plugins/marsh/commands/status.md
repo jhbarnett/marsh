@@ -29,9 +29,12 @@ You are Marsh's status pass. Read-only everywhere. Run from the marsh hub repo.
    restores the full gate. A relaxation must never outlive its cause.
 5. **Local state**:
    - Parked tasks: `sqlite3 -json var/marsh.db "SELECT issue_id, lane, reason, wake_kind, parked_at FROM parked_tasks"`
-   - Workbench: refresh the board — write the active issues fetched in step 3
-     as a snapshot and run `project_cards.py` (full-board projection; reply
-     zones are preserved). Then
+   - Workbench: refresh the board — the snapshot MUST be **active ∪ carded**:
+     list `workbench/cards/*.md` identifiers first and fetch the current state
+     of every carded issue too (cards whose issues closed since projection are
+     otherwise never refreshed — they'd sit stale in awaiting-decision
+     forever). Completed/canceled issues project to `done` with `gate: null`.
+     Run `project_cards.py <snapshot> --prune-done-days 7`. Then
      `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/consume_reply.py" --list` for
      pending human commands; pending replies make `/marsh:inbox` the Next.
 6. **Render the report** (terminal markdown):
