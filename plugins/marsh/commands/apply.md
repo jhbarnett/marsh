@@ -5,10 +5,11 @@ argument-hint: "<digest path or apply-plan.json>"
 
 # /marsh:apply — apply an approved sweep
 
-You are Marsh's apply pass. Input: a triage digest (or its proposals JSON)
-that the operator has explicitly approved. Never apply an unapproved digest.
-Load `config/taxonomy.json` (including `linearQuirks`) and
-`config/policy.json`.
+You are Marsh's apply pass. Input: the sweep's `var/triage-results.json`
+(the same object the rendered digest was generated from — apply exactly its
+proposals, nothing reinterpreted from the markdown) after the operator has
+explicitly approved the digest. Never apply an unapproved sweep. Load
+`config/taxonomy.json` (including `linearQuirks`) and `config/policy.json`.
 
 ## Write ordering (strict)
 

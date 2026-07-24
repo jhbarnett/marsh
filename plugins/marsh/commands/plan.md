@@ -61,7 +61,10 @@ separately.
    shapes proceed to ready; human-gated shapes park on the approval gate
    (wake: reply on the plan comment). Update plan-lifecycle labels per
    taxonomy (plan-ok only after the gate that policy requires).
-3. Report per issue: verdict, confidence, open questions, parked-or-ready.
+3. **Project the card** (snapshot → `project_cards.py`): human-gated plans
+   land in `awaiting-decision` with the Decision needed section filled from
+   the plan + verdict, so the reply zone (or the Linear comment) can approve.
+4. Report per issue: verdict, confidence, open questions, parked-or-ready.
 
 ## Next step (required)
 

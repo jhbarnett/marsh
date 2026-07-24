@@ -54,14 +54,26 @@ before posting any comment.
   excluding anything from the gate requires human approval.
 - Never delete, skip, or weaken a test to pass the gate.
 
+## Panel review (after the gate, before shipping)
+
+Run the verify panel: Workflow with
+`scriptPath: ${CLAUDE_PLUGIN_ROOT}/workflows/verify-panel.js` and args
+`{repo, worktree, baseBranch, branch, issueId, planContract}` (panel lenses
+default sensibly; trim to 2 lenses for layups/docs). Confirmed BLOCKER →
+one fix round through the implement agent, re-gate, re-panel the fix; still
+blocked → report BLOCKED. Confirmed MAJOR/MINOR → fix if trivial, otherwise
+carry into the PR body as known findings and exit DONE_WITH_CONCERNS.
+
 ## Ship + exit
 
 1. Commit (repo's message conventions; include `Co-Authored-By` if the repo
    uses it), `push -u`, `gh pr create --draft` — body: summary, plan link,
-   verification evidence, deviations, `Closes <issue-id>`.
+   verification evidence, panel findings, deviations, `Closes <issue-id>`.
 2. Status → In Review; post `marsh:verification` comment (v2) with the gate
-   evidence and PR URL in refs.
-3. Controller report (data, not prose): STATUS
+   evidence, panel counts, and PR URL in refs.
+3. **Project the card**: write the issue snapshot to `var/` and run
+   `project_cards.py` so the workbench reflects the exit state.
+4. Controller report (data, not prose): STATUS
    (DONE | DONE_WITH_CONCERNS | BLOCKED), PR URL, branch, files changed with
    +/- counts, verify-gate tail, deviations and why, concerns.
 

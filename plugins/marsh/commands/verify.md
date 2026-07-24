@@ -43,7 +43,7 @@ workflow may be layered on top later. Load the registry entry and re-read
   to the operator instead. A recommend-merge comment on a failed verify is
   the one unforgivable output of this station.
 - Mirror the evidence as a `marsh:verification` ledger comment (v2) on the
-  linked issue.
+  linked issue, then project the issue's card (snapshot → `project_cards.py`).
 
 ## Next step (required)
 

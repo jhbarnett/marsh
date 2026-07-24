@@ -39,14 +39,15 @@ issues per sweep).
      "teamDomainHints": { "...from taxonomy..." }
    }
    ```
-5. **Write the digest** to `reports/triage-YYYY-MM-DD.md`:
-   - Summary line: N swept, proposed routing breakdown, anomalies count.
-   - Per issue: proposed shape · domain(s) · team (move?) · size read ·
-     readiness gaps (what's missing before it could be planned) · suspected
-     duplicates · one-line rationale · the exact label/status changes Marsh
-     *would* make when live.
-   - Anomalies section: misrouted, unintelligible, or policy-relevant
-     (risk-class) items.
+5. **Render the digest deterministically** — never hand-render:
+   save the workflow payload and return value as `var/triage-payload.json` and
+   `var/triage-results.json`, then run
+   `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/render_digest.py" var/triage-payload.json var/triage-results.json -o reports/triage-YYYY-MM-DD.md`.
+   Exit code 1 means UNCLASSIFIED issues (swept but no proposal): re-run those
+   through the workflow and re-render before presenting — never present a
+   digest with silent gaps. Keep both JSON files: `/marsh:apply` consumes
+   `var/triage-results.json`, so the approved digest and the applied plan are
+   the same object.
 6. **Report** to the user: the summary line + the 3 most consequential
    proposals + digest path. Do not dump the whole digest to the terminal.
 
