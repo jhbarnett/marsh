@@ -18,10 +18,16 @@ issues per sweep).
    `statusByType.triage` is `null` are skipped (note them in the digest —
    their intake path comes from `taxonomy.intake`).
 2. **Fetch intake**: Linear MCP `list_issues` per team filtered to the
-   triage-type status, oldest first, up to the limit. For each: identifier,
-   title, description (truncate ~1500 chars), labels, creator, createdAt, url.
-3. **Fetch dedupe context**: titles + identifiers of open issues per team
-   (up to ~150/team, minimal fields).
+   triage-type status, oldest first, up to the limit — ONE batched fetch per
+   team with full fields, dumped to a raw JSON file.
+3. **Shape the payload in code** (PTC discipline — raw API payloads never
+   reach agents): `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/build_briefs.py"
+   <raw.json> -o var/briefs.json` → trimmed per-issue briefs + the
+   `openTitles` dedupe index. Pass `briefs` as the workflow `issues` and
+   `openTitles` straight through. Include the classify template:
+   `promptTemplate` = contents of
+   `${CLAUDE_PLUGIN_ROOT}/prompts/triage-classify.txt` (single source — the
+   eval harness replays this exact file).
 4. **Run the workflow**: invoke the Workflow tool with
    `scriptPath: ${CLAUDE_PLUGIN_ROOT}/workflows/triage-sweep.js` and args.
    The payload MUST include `validLabels` — the taxonomy's complete label set —

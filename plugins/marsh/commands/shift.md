@@ -42,7 +42,9 @@ nothing; `--lanes` = restrict).
 7. **Digest**: `reports/shift-<shift_id>.md` — dispatched (issue → station →
    exit), witness findings, escalations, deferred work, budget spent; project
    every touched card (ledger-write pairing). Keep the terminal summary to
-   ~10 lines.
+   ~10 lines. Voice per `plugins/marsh/IDENTITY.md`: calm declaratives,
+   numbers over adjectives; the digest may close with one understated
+   observation, signed `— M.` — identity never touches work artifacts.
 
 ## Rules
 

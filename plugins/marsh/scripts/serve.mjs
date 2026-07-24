@@ -155,7 +155,7 @@ function boardHtml() {
 
 function pageHtml() {
   const th = loadTheme();
-  return `<!doctype html><meta charset="utf-8"><title>marsh</title>
+  return `<!doctype html><meta charset="utf-8"><title>marsh</title><link rel="icon" type="image/svg+xml" href="/avatar.svg">
 <style>
   :root{${cssVars(th.dark)}}
   @media (prefers-color-scheme: light){:root{${cssVars(th.light)}}}
@@ -324,6 +324,9 @@ createServer(async (req, res) => {
     } else if (url.pathname === '/card') {
       const c = parseCard(safePath(url.searchParams.get('file')));
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(c));
+    } else if (url.pathname === '/avatar.svg') {
+      const p = join(import.meta.dirname, '..', 'assets', 'marsh-avatar.svg');
+      res.writeHead(200, { 'content-type': 'image/svg+xml' }).end(existsSync(p) ? readFileSync(p) : '');
     } else if (url.pathname.startsWith('/artifacts/') && req.method === 'GET') {
       const rel = decodeURIComponent(url.pathname.slice('/artifacts/'.length));
       const p = join(process.cwd(), 'artifacts', rel);
