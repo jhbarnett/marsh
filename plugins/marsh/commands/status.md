@@ -34,6 +34,9 @@ You are Marsh's status pass. Read-only everywhere. Run from the marsh hub repo.
      of every carded issue too (cards whose issues closed since projection are
      otherwise never refreshed — they'd sit stale in awaiting-decision
      forever). Completed/canceled issues project to `done` with `gate: null`.
+     Snapshot entries should carry `labels` (array) and `priority` (Linear
+     0–4) — projection derives the card's shape glyph, team icon, and
+     priority stripe from them via the taxonomy.
      Run `project_cards.py <snapshot> --prune-done-days 7`. Then
      `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/consume_reply.py" --list` for
      pending human commands; pending replies make `/marsh:inbox` the Next.

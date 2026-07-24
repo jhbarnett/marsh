@@ -68,7 +68,8 @@ function parseCard(path) {
     file: basename(path),
     issue: fm.issue, title: fm.title, lane: fm.lane, gate: fm.gate, url: fm.url,
     column: COLUMNS.includes(fm.column) ? fm.column : 'inbox',
-    updated: fm.updated,
+    updated: fm.updated, gateSince: fm.gateSince, shape: fm.shape,
+    teamIcon: fm.teamIcon, priority: fm.priority,
     branch: ref('branch'), pr: ref('pr'), artifacts,
     summary: zone('Summary'),
     decision: zone('Decision needed').replace(/<!--[\s\S]*?-->/g, '').trim(),
@@ -99,14 +100,44 @@ function writeReply(file, text) {
 }
 
 // ---------- html ----------
+const SHAPE_GLYPHS = { bug: '🐛', feature: '✨', debt: '🔧', spike: '🔬', epic: '🏔', docs: '📚', gap: '🧭', security: '🔒', layup: '🏀' };
+const PR_SVG = '<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z"/></svg>';
+const CLIP_SVG = '<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M12.212 3.02a1.753 1.753 0 0 0-2.478.003l-5.83 5.83a3.007 3.007 0 0 0-.88 2.127c0 .795.315 1.551.88 2.116.567.567 1.333.89 2.126.89.79 0 1.548-.321 2.116-.89l5.48-5.48a.75.75 0 0 1 1.061 1.06l-5.48 5.48a4.492 4.492 0 0 1-3.177 1.33c-1.2 0-2.345-.487-3.187-1.33a4.483 4.483 0 0 1-1.32-3.177c0-1.195.475-2.341 1.32-3.186l5.83-5.83a3.253 3.253 0 0 1 5.599 2.248 3.25 3.25 0 0 1-.962 2.25l-5.84 5.84a2.004 2.004 0 0 1-2.828 0 1.998 1.998 0 0 1 0-2.828l5.49-5.48a.751.751 0 0 1 1.06 1.06l-5.49 5.48a.5.5 0 0 0 .708.708l5.84-5.84a1.753 1.753 0 0 0 0-2.481Z"/></svg>';
+
+function gateAge(c) {
+  const since = c.gateSince && c.gateSince !== 'null' ? c.gateSince : c.updated;
+  const h = (Date.now() - Date.parse(since)) / 3.6e6;
+  if (!isFinite(h) || h < 0) return { text: '', cls: '' };
+  const text = h < 1 ? `${Math.round(h * 60)}m` : h < 48 ? `${Math.round(h)}h` : `${Math.round(h / 24)}d`;
+  return { text, cls: h >= 48 ? 'age-err' : h >= 24 ? 'age-warn' : '' };
+}
+const webArtifact = (a) => {
+  const i = a.indexOf('artifacts/');
+  return i >= 0 ? '/' + a.slice(i) : null;
+};
+
 function cardHtml(c) {
-  const badge = (t, cls) => (t && t !== 'null' ? `<span class="badge ${cls}">${esc(t)}</span>` : '');
-  return `<div class="card" draggable="true" data-file="${esc(c.file)}">
-  <div class="head"><a href="${esc(c.url)}" target="_blank">${esc(c.issue)}</a> ${badge(c.lane, 'lane')} ${badge(c.gate, 'gate')}</div>
+  const glyph = SHAPE_GLYPHS[c.shape] ? `<span class="glyph" title="${esc(c.shape)}">${SHAPE_GLYPHS[c.shape]}</span>` : '';
+  const team = c.teamIcon && c.teamIcon !== 'null' ? `<span class="glyph" title="team">${esc(c.teamIcon)}</span>` : '';
+  let gate = '';
+  if (c.gate && c.gate !== 'null') {
+    const a = gateAge(c);
+    gate = `<span class="badge gate ${a.cls}">${esc(c.gate)}${a.text ? ' · ' + a.text : ''}</span>`;
+  }
+  const prNum = c.pr !== 'null' ? (c.pr.match(/\/pull\/(\d+)/)?.[1] ?? '') : null;
+  const prChip = c.pr !== 'null' ? `<a class="chip" href="${esc(c.pr)}" target="_blank">${PR_SVG}${prNum ? ' #' + prNum : ' PR'}</a>` : '';
+  const artChips = c.artifacts.map((a) => {
+    const w = webArtifact(a);
+    return w
+      ? `<a class="chip" href="${esc(w)}" target="_blank" data-preview="${esc(w)}">${CLIP_SVG} ${esc(basename(a))}</a>`
+      : '';
+  }).join(' ');
+  const prio = c.priority && c.priority !== 'null' ? ` prio-${esc(c.priority)}` : '';
+  return `<div class="card${prio}" draggable="true" data-file="${esc(c.file)}">
+  <div class="head"><a href="${esc(c.url)}" target="_blank">${esc(c.issue)}</a> ${glyph}${team}<span class="badge">${esc(c.lane)}</span> ${gate}</div>
   <div class="title">${esc(c.title)}</div>
   ${c.decision ? `<div class="decision">${esc(c.decision)}</div>` : ''}
-  <div class="refs">${c.pr !== 'null' ? `<a class="ref" href="${esc(c.pr)}" target="_blank">PR</a>` : ''}
-  ${c.artifacts.map((a) => `<a class="ref" href="file://${esc(a)}">artifact</a>`).join(' ')}</div>
+  <div class="refs">${prChip} ${artChips}</div>
   <details${c.reply ? ' open' : ''}><summary>reply${c.reply ? ' ●' : ''}</summary>
     <textarea data-file="${esc(c.file)}" placeholder="Decision / instructions — Marsh consumes on next wake">${esc(c.reply)}</textarea>
     <button data-file="${esc(c.file)}">save</button>
@@ -149,6 +180,16 @@ function pageHtml() {
   .title{margin:3px 0;color:var(--fg);font-size:12px}
   .badge{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--bg);border:1px solid var(--border);color:var(--dim)}
   .badge.gate{border-color:var(--warn);color:color-mix(in srgb,var(--warn) 70%,var(--fg))}
+  .badge.gate.age-warn{background:color-mix(in srgb,var(--warn) 18%,var(--bg))}
+  .badge.gate.age-err{border-color:var(--err);color:var(--err);background:color-mix(in srgb,var(--err) 12%,var(--bg))}
+  .glyph{font-size:12px}
+  .chip{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:1px 7px;border-radius:8px;border:1px solid var(--border);color:var(--accent);text-decoration:none;max-width:150px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .chip:hover{border-color:var(--accent)}
+  .card.prio-urgent{border-left:3px solid var(--err)}
+  .card.prio-high{border-left:3px solid var(--warn)}
+  .card.prio-medium{border-left:3px solid var(--accent)}
+  #preview{position:fixed;width:420px;height:300px;background:var(--bg);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 30px rgba(0,0,0,.35);display:none;z-index:8;overflow:hidden}
+  #preview iframe{width:100%;height:100%;border:0;background:#fff}
   .decision{border-left:3px solid var(--warn);padding:3px 8px;margin:5px 0;color:var(--fg);background:color-mix(in srgb,var(--warn) 12%,var(--bg));white-space:pre-wrap;font-size:12px}
   .refs{margin-top:2px}.ref{font-size:11px;margin-right:6px;color:var(--accent)}
   details{margin-top:4px}summary{cursor:pointer;color:var(--dim);font-size:11px}
@@ -177,6 +218,7 @@ function pageHtml() {
 </div>
 </div>
 <div id="toast"></div>
+<div id="preview"><iframe></iframe></div>
 <script>
   const post=(u,b)=>fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json().catch(()=>({ok:r.ok})));
   const toast=(t)=>{const e=document.getElementById('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1800)};
@@ -195,6 +237,17 @@ function pageHtml() {
     document.querySelectorAll('button[data-file]').forEach(b=>b.addEventListener('click',async()=>{
       const t=document.querySelector('textarea[data-file="'+b.dataset.file+'"]');
       await post('/reply',{file:b.dataset.file,text:t.value});b.textContent='saved';setTimeout(refreshBoard,400)}));
+    const pv=document.getElementById('preview'), pvf=pv.querySelector('iframe');
+    document.querySelectorAll('[data-preview]').forEach(ch=>{
+      ch.addEventListener('mouseenter',()=>{
+        const r=ch.getBoundingClientRect();
+        pv.style.left=Math.min(r.left,window.innerWidth-440)+'px';
+        pv.style.top=Math.min(r.bottom+6,window.innerHeight-320)+'px';
+        if(pvf.src!==location.origin+ch.dataset.preview)pvf.src=ch.dataset.preview;
+        pv.style.display='block';
+      });
+      ch.addEventListener('mouseleave',()=>{pv.style.display='none'});
+    });
   }
   async function refreshBoard(){
     const f=document.activeElement;
@@ -271,6 +324,16 @@ createServer(async (req, res) => {
     } else if (url.pathname === '/card') {
       const c = parseCard(safePath(url.searchParams.get('file')));
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(c));
+    } else if (url.pathname.startsWith('/artifacts/') && req.method === 'GET') {
+      const rel = decodeURIComponent(url.pathname.slice('/artifacts/'.length));
+      const p = join(process.cwd(), 'artifacts', rel);
+      if (rel.includes('..') || !p.startsWith(join(process.cwd(), 'artifacts'))) throw new Error('bad path');
+      if (!existsSync(p)) { res.writeHead(404).end('no such artifact'); return; }
+      const ext = p.slice(p.lastIndexOf('.') + 1).toLowerCase();
+      const mime = { html: 'text/html', htm: 'text/html', svg: 'image/svg+xml', png: 'image/png',
+                     jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', json: 'application/json',
+                     css: 'text/css', js: 'text/javascript' }[ext] ?? 'text/plain';
+      res.writeHead(200, { 'content-type': mime }).end(readFileSync(p));
     } else if (url.pathname === '/events') {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
       res.write('\n');

@@ -35,6 +35,45 @@ REPLY_RE = re.compile(r"^## Your reply\n(.*?)(?=^## |\Z)", re.M | re.S)
 LOG_RE = re.compile(r"^## Log\n(.*?)(?=^## |\Z)", re.M | re.S)
 COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
 
+SHAPE_GLYPHS = {"bug": "🐛", "feature": "✨", "debt": "🔧", "spike": "🔬", "epic": "🏔",
+                "docs": "📚", "gap": "🧭", "security": "🔒", "layup": "🏀"}
+TEAM_ICONS = {"MobilePhone": "📱", "Database": "🗄️", "Cube": "📦", "Lock": "🔒"}
+PRIORITY_BY_NUM = {1: "urgent", 2: "high", 3: "medium", 4: "low"}
+SEVERITY_MAP = {"Critical": "urgent", "High": "high", "Medium": "medium", "Low": "low"}
+
+
+def load_taxonomy():
+    try:
+        return json.loads(Path("config/taxonomy.json").read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+TAXONOMY = load_taxonomy()
+SHAPE_MAP = TAXONOMY.get("labelGroups", {}).get("Scope", {}).get("shapeMap", {})
+TEAM_META = TAXONOMY.get("teams", {})
+
+
+def derive_shape(issue: dict):
+    if issue.get("shape"):
+        return issue["shape"]
+    for lab in issue.get("labels") or []:
+        if lab in SHAPE_MAP:
+            return SHAPE_MAP[lab]
+        if lab.startswith("is-"):
+            return lab[3:]
+    return None
+
+
+def derive_priority(issue: dict):
+    p = issue.get("priority")
+    if isinstance(p, int) and p in PRIORITY_BY_NUM:
+        return PRIORITY_BY_NUM[p]
+    for lab in issue.get("labels") or []:
+        if lab in SEVERITY_MAP:
+            return SEVERITY_MAP[lab]
+    return None
+
 REPLY_PLACEHOLDER = (
     "<!-- YOURS. Write or dictate a decision, changes, or instructions here.\n"
     "     Marsh consumes this zone on its next wake. -->\n"
@@ -72,9 +111,12 @@ def is_real_reply(text: str) -> bool:
     return bool(COMMENT_RE.sub("", text).strip())
 
 
-def render(issue: dict, reply: str, log: str, now: str) -> str:
+def render(issue: dict, reply: str, log: str, now: str, gate_since: str = "") -> str:
     refs = issue.get("refs") or {}
     artifacts = refs.get("artifacts") or []
+    shape = derive_shape(issue)
+    priority = derive_priority(issue)
+    team_icon = TEAM_ICONS.get((TEAM_META.get(issue.get("team", "")) or {}).get("icon", ""), "")
     fm = [
         "---",
         f"issue: {issue['identifier']}",
@@ -82,6 +124,10 @@ def render(issue: dict, reply: str, log: str, now: str) -> str:
         f"lane: {lane_for(issue)}",
         f"column: {column_for(issue)}",
         f"gate: {issue.get('gate') or 'null'}",
+        f"gateSince: {gate_since or 'null'}",
+        f"shape: {shape or 'null'}",
+        f"teamIcon: {team_icon or 'null'}",
+        f"priority: {priority or 'null'}",
         f"updated: {now}",
         f"url: {issue.get('url', '')}",
         "refs:",
@@ -171,14 +217,23 @@ def main() -> int:
     pending_replies, written = [], 0
     for issue in snapshot:
         path = cards_dir / f"{issue['identifier']}.md"
-        reply, log = "", ""
+        reply, log, gate_since = "", "", ""
         if path.exists():
             body = path.read_text()
             reply = zone_text(body, REPLY_RE)
             log = zone_text(body, LOG_RE)
             if is_real_reply(reply):
                 pending_replies.append(issue["identifier"])
-        path.write_text(render(issue, reply, log, now))
+            m_gate = re.search(r"^gate: (.+)$", body, re.M)
+            m_since = re.search(r"^gateSince: (.+)$", body, re.M)
+            prev_gate = m_gate.group(1) if m_gate else "null"
+            prev_since = m_since.group(1) if m_since and m_since.group(1) != "null" else ""
+            # same gate persists -> keep its start; new gate -> stamp now
+            if issue.get("gate"):
+                gate_since = prev_since if prev_gate == issue["gate"] and prev_since else now
+        elif issue.get("gate"):
+            gate_since = now
+        path.write_text(render(issue, reply, log, now, gate_since))
         written += 1
 
     print(json.dumps({"written": written, "pendingReplies": pending_replies, "pruned": pruned}))
