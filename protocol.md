@@ -71,6 +71,9 @@ any pass can crash and a successor rehydrates entirely from status + comments.
 - **Verify gate.** Egress requires a `marsh:verification` comment whose evidence
   meets the plan's acceptance criteria. No evidence, no PR.
 - **Merge.** Always human. Marsh opens draft PRs and links them in `refs`.
+  **Never put bare issue identifiers in PR titles** — Linear attaches the PR
+  and can yank a Done issue back to started (seen on CORE-939). Identifiers
+  belong in the PR body (`Closes X` magic words are fine).
 - **Elicitation.** Posting `marsh:elicitation` parks the issue (wake condition:
   reply on that comment). Parked issues consume no WIP.
 

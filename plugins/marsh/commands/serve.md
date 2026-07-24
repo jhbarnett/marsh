@@ -28,7 +28,17 @@ The **console pane** (toggle top-right) has two views:
   `--term <url>` (default `http://127.0.0.1:4644`), `--tmux <name>`
   (default `marsh`).
 
-The compose box works with both: drag a card in for a context block, then
-**send** (types the text into the tmux session via `send-keys` — never
-presses Enter; you review and submit in the terminal) or **copy** for manual
-paste.
+**Drag a card anywhere over the terminal area** and its context block is
+typed directly into the session prompt via `send-keys` — never pressing
+Enter; the operator reviews and submits. If tmux is unreachable, the block
+falls back to the clipboard. There is no separate compose surface.
+
+Layout: kanban columns render as horizontal rows on top, the session fills
+the bottom; the divider drags vertically (persisted). The whole dashboard
+and the ttyd terminal share the operator's terminal theme
+(`theme_sync.py` → `workbench/theme.json`, Ghostty supported, dark/light
+follow system appearance).
+
+One-shot bringup: `plugins/marsh/scripts/marsh-up.sh` (theme sync → tmux
+session running claude → themed ttyd → serve → browser; idempotent).
+`package_app.sh` wraps that launcher as `dist/Marsh.app` + `Marsh.dmg`.

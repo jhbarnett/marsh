@@ -2,6 +2,12 @@
 """Project a ledger snapshot into workbench cards.
 
 Usage: project_cards.py <snapshot.json> [--cards-dir workbench/cards] [--prune-done-days N]
+       project_cards.py --set ISSUE key=value [key=value ...]   # incremental update
+
+The canonical snapshot home is var/board-snapshot.json (hub-durable, not job
+tmp). --set mutates one issue's entry there (dotted keys ok: refs.pr=URL,
+gate=null, statusType=completed) and reprojects the board — no more ad hoc
+heredoc mutations.
 
 Reconciliation contract (stale-card guard): the snapshot for a full-board
 refresh MUST include every issue that already has a card (read the cards dir
@@ -104,8 +110,34 @@ def render(issue: dict, reply: str, log: str, now: str) -> str:
     return "\n".join(fm + body)
 
 
+SNAPSHOT = Path("var/board-snapshot.json")
+
+
+def set_mode(argv) -> int:
+    ident = argv[0]
+    snap = json.loads(SNAPSHOT.read_text()) if SNAPSHOT.exists() else []
+    entry = next((i for i in snap if i["identifier"] == ident), None)
+    if entry is None:
+        entry = {"identifier": ident}
+        snap.append(entry)
+    for kv in argv[1:]:
+        key, _, val = kv.partition("=")
+        parsed = None if val in ("null", "None") else (val.lower() == "true" if val.lower() in ("true", "false") else val)
+        obj = entry
+        parts = key.split(".")
+        for p in parts[:-1]:
+            obj = obj.setdefault(p, {})
+        obj[parts[-1]] = parsed
+    SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
+    SNAPSHOT.write_text(json.dumps(snap, indent=1))
+    sys.argv = [sys.argv[0], str(SNAPSHOT)]
+    return main()
+
+
 def main() -> int:
     argv = sys.argv[1:]
+    if argv[:1] == ["--set"]:
+        return set_mode(argv[1:])
     prune_days = 0
     if "--prune-done-days" in argv:
         i = argv.index("--prune-done-days")

@@ -48,6 +48,10 @@ set: plan-approval, elicitation, takeover, deviation) — stalled WIP, drain
 first. `in-review` = Marsh **finished and handed off** (draft PR open,
 evidence posted; mirrors Linear "In Review") — your normal review backlog.
 Egress clears `gate`; a shipped PR is never an awaiting-decision card.
+The converse also holds: **an open elicitation keeps the gate regardless of
+issue status** — a Done issue with an unanswered `marsh:elicitation` (e.g.
+follow-up filing approval) stays in `awaiting-decision` until the decision is
+consumed. Gate = open human decision, not pipeline position.
 
 ## Ownership rules
 

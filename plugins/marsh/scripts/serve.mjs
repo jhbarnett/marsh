@@ -1,12 +1,11 @@
 #!/usr/bin/env node
-// marsh serve — local kanban + live session console over workbench/cards/.
+// marsh serve — cockpit: horizontal kanban rows over an embedded live session.
 // Zero dependencies. Writes are string-scoped edits only:
 //   POST /move  rewrites the `column:` frontmatter line, nothing else
 //   POST /reply rewrites the "## Your reply" zone, nothing else
-// The conversation pane is READ-ONLY: it tails the newest Claude Code session
-// transcript for this hub (or --session <path>) and streams human/assistant
-// text. Drag a card onto the pane to compose a context block for pasting
-// into the session terminal.
+//   POST /send  types literal keystrokes into the tmux session (never Enter)
+// Theme comes from workbench/theme.json (theme_sync.py extracts it from the
+// operator's terminal config); dark/light variants follow system appearance.
 import { createServer } from 'node:http';
 import { readFileSync, writeFileSync, readdirSync, watch, existsSync, statSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, basename } from 'node:path';
@@ -27,6 +26,22 @@ const COLUMNS = ['inbox', 'ready', 'in-progress', 'awaiting-decision', 'in-revie
 
 const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---------- theme ----------
+const FALLBACK = {
+  background: '#111111', foreground: '#dddddd', cursor: '#dddddd', selectionBg: '#333333',
+  palette: ['#111111', '#cc6666', '#44aa66', '#f0c674', '#8ab4f8', '#b294bb', '#8abeb7', '#c5c8c6',
+            '#666666', '#d54e53', '#b9ca4a', '#e7c547', '#7aa6da', '#c397d8', '#70c0b1', '#eaeaea'],
+};
+function loadTheme() {
+  try { return JSON.parse(readFileSync('workbench/theme.json', 'utf8')); }
+  catch { return { source: 'default', dark: FALLBACK, light: FALLBACK }; }
+}
+function cssVars(t) {
+  const p = t.palette ?? FALLBACK.palette;
+  return `--bg:${t.background};--fg:${t.foreground};--panel:${p[0]};--sel:${t.selectionBg ?? p[8]};` +
+         `--dim:${p[8]};--accent:${p[4]};--ok:${p[2]};--warn:${p[3]};--err:${p[1]};--cursor:${t.cursor ?? t.foreground};`;
+}
 
 // ---------- cards ----------
 function parseCard(path) {
@@ -122,15 +137,13 @@ const ring = [];
 let sessionPath = findSession();
 let offset = 0;
 if (sessionPath && existsSync(sessionPath)) {
-  // preload: last ~200KB for recent history
   const size = statSync(sessionPath).size;
   const start = Math.max(0, size - 200_000);
   const fd = openSync(sessionPath, 'r');
   const buf = Buffer.alloc(size - start);
   readSync(fd, buf, 0, buf.length, start);
   closeSync(fd);
-  const lines = buf.toString('utf8').split('\n').slice(start > 0 ? 1 : 0);
-  for (const l of lines) {
+  for (const l of buf.toString('utf8').split('\n').slice(start > 0 ? 1 : 0)) {
     if (!l.trim()) continue;
     try { const msg = extractMsg(JSON.parse(l)); if (msg) pushMsg(msg, false); } catch { /* skip */ }
   }
@@ -146,7 +159,6 @@ function pushMsg(msg, broadcast = true) {
 
 let partial = '';
 setInterval(() => {
-  // follow the newest session if it changes
   const latest = findSession();
   if (latest && latest !== sessionPath) {
     sessionPath = latest;
@@ -179,8 +191,8 @@ function cardHtml(c) {
   <div class="head"><a href="${esc(c.url)}" target="_blank">${esc(c.issue)}</a> ${badge(c.lane, 'lane')} ${badge(c.gate, 'gate')}</div>
   <div class="title">${esc(c.title)}</div>
   ${c.decision ? `<div class="decision">${esc(c.decision)}</div>` : ''}
-  ${c.pr !== 'null' ? `<a class="ref" href="${esc(c.pr)}" target="_blank">PR</a>` : ''}
-  ${c.artifacts.map((a) => `<a class="ref" href="file://${esc(a)}">artifact</a>`).join(' ')}
+  <div class="refs">${c.pr !== 'null' ? `<a class="ref" href="${esc(c.pr)}" target="_blank">PR</a>` : ''}
+  ${c.artifacts.map((a) => `<a class="ref" href="file://${esc(a)}">artifact</a>`).join(' ')}</div>
   <details${c.reply ? ' open' : ''}><summary>reply${c.reply ? ' ●' : ''}</summary>
     <textarea data-file="${esc(c.file)}" placeholder="Decision / instructions — Marsh consumes on next wake">${esc(c.reply)}</textarea>
     <button data-file="${esc(c.file)}">save</button>
@@ -192,81 +204,83 @@ function boardHtml() {
   const all = cards();
   return COLUMNS.map((col) => {
     const items = all.filter((c) => c.column === col);
-    return `<div class="col" data-column="${col}"><h2>${col} <span>${items.length}</span></h2>${items.map(cardHtml).join('')}</div>`;
+    return `<div class="col" data-column="${col}"><h2>${col}<span>${items.length}</span></h2><div class="cards">${items.map(cardHtml).join('')}</div></div>`;
   }).join('');
 }
 
 function pageHtml() {
+  const th = loadTheme();
   return `<!doctype html><meta charset="utf-8"><title>marsh</title>
 <style>
-  body{font:13px/1.45 -apple-system,sans-serif;margin:0;background:#111;color:#ddd;height:100vh;display:flex;flex-direction:column}
-  header{padding:10px 16px;border-bottom:1px solid #333;display:flex;gap:12px;align-items:baseline;flex-shrink:0}
-  h1{font-size:15px;margin:0}#stamp{color:#777;font-size:11px}#toggle{margin-left:auto;background:#333;color:#ddd;border:0;border-radius:4px;padding:3px 10px;cursor:pointer}
-  main{display:flex;flex:1;min-height:0}
-  .board{display:flex;gap:10px;padding:12px;overflow-x:auto;align-items:flex-start;flex:3;min-width:0}
-  .col{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;min-width:220px;max-width:280px;flex:1;padding:8px;min-height:120px}
-  .col h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#999;margin:2px 4px 8px}.col h2 span{color:#555}
-  .col.drop{outline:2px dashed #4a6}
-  .card{background:#222;border:1px solid #333;border-radius:6px;padding:8px;margin-bottom:8px;cursor:grab}
-  .card .head{display:flex;gap:6px;align-items:center}.card a{color:#8ab4f8;text-decoration:none;font-weight:600}
-  .title{margin:4px 0;color:#ccc}
-  .badge{font-size:10px;padding:1px 6px;border-radius:8px;background:#333}.badge.gate{background:#5c3b00;color:#fc6}
-  .decision{border-left:3px solid #fc6;padding:4px 8px;margin:6px 0;color:#eda;background:#1c1712;white-space:pre-wrap}
-  .ref{font-size:11px;margin-right:6px}
-  details{margin-top:6px}summary{cursor:pointer;color:#888;font-size:11px}
-  textarea{width:100%;min-height:56px;background:#181818;color:#ddd;border:1px solid #333;border-radius:4px;margin:6px 0 4px;box-sizing:border-box}
-  button{background:#2d4;border:0;border-radius:4px;padding:3px 10px;cursor:pointer}
-  .console{flex:1;min-width:340px;max-width:520px;border-left:1px solid #333;display:flex;flex-direction:column;background:#151515}
-  .console.hidden{display:none}
-  .console h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#999;margin:10px 12px 6px;flex-shrink:0}
-  .console h2 small{color:#555;text-transform:none;letter-spacing:0}
-  #msgs{flex:1;overflow-y:auto;padding:0 12px;min-height:0}
-  .msg{margin:8px 0;padding:8px;border-radius:6px;background:#1c1c1c;white-space:pre-wrap;word-break:break-word}
-  .msg.you{background:#1a2230;border-left:3px solid #8ab4f8}
-  .msg.marsh{border-left:3px solid #4a6}
-  .msg.sys{color:#777;font-size:11px;background:none;padding:2px 8px}
-  .msg .who{font-size:10px;text-transform:uppercase;color:#888;margin-bottom:3px}
-  .compose{border-top:1px solid #333;padding:10px 12px;flex-shrink:0}
-  .compose.drop{outline:2px dashed #8ab4f8}
-  .compose textarea{min-height:72px;margin:0 0 6px}
-  .compose .hint{font-size:10px;color:#666;margin-bottom:4px}
-  .compose .row{display:flex;gap:8px}
-  .compose button.alt{background:#333;color:#ddd}
-  .views{margin-left:auto;display:inline-flex;gap:4px;align-items:center}
-  .view{background:#222;color:#888;border:1px solid #333;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:10px}
-  .view.on{background:#333;color:#ddd}
-  #term-pop{color:#8ab4f8;text-decoration:none;font-size:12px;margin-left:2px}
-  #termwrap{flex:1;display:flex;flex-direction:column;min-height:0}
-  #term{flex:1;border:0;background:#000;width:100%}
-  code{background:#222;padding:0 4px;border-radius:3px}
+  :root{${cssVars(th.dark)}}
+  @media (prefers-color-scheme: light){:root{${cssVars(th.light)}}}
+  *{box-sizing:border-box}
+  body{font:13px/1.45 -apple-system,sans-serif;margin:0;background:var(--bg);color:var(--fg);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  header{padding:8px 16px;border-bottom:1px solid var(--sel);display:flex;gap:12px;align-items:baseline;flex-shrink:0}
+  h1{font-size:14px;margin:0}#stamp{color:var(--dim);font-size:11px}
+  .hbtns{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .view{background:color-mix(in srgb,var(--panel) 80%,var(--fg) 4%);color:var(--dim);border:1px solid var(--sel);border-radius:4px;padding:2px 9px;cursor:pointer;font-size:11px}
+  .view.on{color:var(--fg);border-color:var(--dim)}
+  #term-pop{color:var(--accent);text-decoration:none;font-size:13px}
+  #board{overflow-y:auto;padding:8px 12px;flex-shrink:0}
+  .col{display:flex;align-items:flex-start;border-bottom:1px solid color-mix(in srgb,var(--sel) 50%,transparent);padding:6px 0}
+  .col:last-child{border-bottom:0}
+  .col h2{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:6px 0 0;width:118px;flex-shrink:0}
+  .col h2 span{margin-left:6px;color:var(--dim);opacity:.6}
+  .col.drop{outline:2px dashed var(--ok);outline-offset:-2px;border-radius:6px}
+  .cards{display:flex;flex-wrap:wrap;gap:8px;flex:1;min-height:34px}
+  .card{background:color-mix(in srgb,var(--panel) 88%,var(--fg) 5%);border:1px solid var(--sel);border-radius:6px;padding:7px 9px;width:236px;cursor:grab}
+  .card .head{display:flex;gap:6px;align-items:center}.card a{color:var(--accent);text-decoration:none;font-weight:600}
+  .title{margin:3px 0;color:var(--fg);font-size:12px}
+  .badge{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--sel);color:var(--fg)}
+  .badge.gate{background:color-mix(in srgb,var(--warn) 25%,var(--panel));color:var(--warn)}
+  .decision{border-left:3px solid var(--warn);padding:3px 8px;margin:5px 0;color:color-mix(in srgb,var(--warn) 60%,var(--fg));background:color-mix(in srgb,var(--warn) 8%,transparent);white-space:pre-wrap;font-size:12px}
+  .refs{margin-top:2px}.ref{font-size:11px;margin-right:6px;color:var(--accent)}
+  details{margin-top:4px}summary{cursor:pointer;color:var(--dim);font-size:11px}
+  textarea{width:100%;min-height:52px;background:var(--bg);color:var(--fg);border:1px solid var(--sel);border-radius:4px;margin:5px 0 4px}
+  button{background:var(--ok);color:var(--bg);border:0;border-radius:4px;padding:3px 10px;cursor:pointer}
+  #splitter{height:5px;background:var(--sel);cursor:row-resize;flex-shrink:0}
+  #splitter:hover{background:var(--accent)}
+  #console{flex:1;min-height:120px;display:flex;flex-direction:column;position:relative;background:var(--bg)}
+  #term{flex:1;border:0;width:100%;background:var(--bg)}
+  #msgs{flex:1;overflow-y:auto;padding:4px 14px;display:none}
+  .msg{margin:7px 0;padding:7px 9px;border-radius:6px;background:color-mix(in srgb,var(--panel) 88%,var(--fg) 4%);white-space:pre-wrap;word-break:break-word}
+  .msg.you{border-left:3px solid var(--accent)}
+  .msg.marsh{border-left:3px solid var(--ok)}
+  .msg.sys{color:var(--dim);font-size:11px;background:none;padding:1px 8px}
+  .msg .who{font-size:10px;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
+  #dropzone{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 72%,transparent);border:2px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:14px;z-index:5}
+  #dropzone.active{display:flex}
+  #toast{position:fixed;bottom:14px;right:14px;background:var(--panel);color:var(--fg);border:1px solid var(--sel);border-radius:6px;padding:7px 12px;font-size:12px;opacity:0;transition:opacity .25s;z-index:9}
+  #toast.show{opacity:1}
+  code{background:var(--sel);padding:0 4px;border-radius:3px}
+  .hint{font-size:10px;color:var(--dim);padding:3px 14px}
 </style>
-<header><h1>marsh workbench</h1><span id="stamp"></span><button id="toggle">console</button></header>
-<main>
-  <div class="board" id="board"></div>
-  <div class="console" id="console">
-    <h2>session <small id="sess"></small>
-      <span class="views"><button id="v-chat" class="view on">transcript</button><button id="v-term" class="view">terminal</button>
-      <a id="term-pop" href="${esc(TERM_URL)}" target="_blank" title="open terminal in its own tab">↗</a></span></h2>
-    <div id="msgs"></div>
-    <div id="termwrap" style="display:none">
-      <iframe id="term" src="about:blank"></iframe>
-      <div class="hint" style="padding:4px 12px">blank? start it: <code>tmux new -A -s ${esc(TMUX)}</code> (run claude inside) then <code>ttyd -W -p 4644 tmux attach -t ${esc(TMUX)}</code></div>
-    </div>
-    <div class="compose" id="compose">
-      <div class="hint">drop cards here for context · send types into the tmux session (no Enter) · copy for paste</div>
-      <textarea id="draft" placeholder="Ask Marsh… (drag cards in for context)"></textarea>
-      <div class="row"><button id="send">send</button><button id="copy" class="alt">copy</button><button id="clear" class="alt">clear</button></div>
-    </div>
-  </div>
-</main>
+<header><h1>marsh</h1><span id="stamp"></span>
+  <div class="hbtns"><button id="v-term" class="view on">terminal</button><button id="v-chat" class="view">transcript</button>
+  <a id="term-pop" href="${esc(TERM_URL)}" target="_blank" title="open terminal in its own tab">↗</a></div></header>
+<div id="board"></div>
+<div id="splitter"></div>
+<div id="console">
+  <iframe id="term" src="${esc(TERM_URL)}"></iframe>
+  <div id="msgs"></div>
+  <div class="hint" id="termhint" style="display:none">terminal blank? <code>plugins/marsh/scripts/marsh-up.sh</code> brings up tmux+claude+ttyd+serve</div>
+  <div id="dropzone">drop to type context into the session</div>
+</div>
+<div id="toast"></div>
 <script>
-  const post=(u,b)=>fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)});
+  const post=(u,b)=>fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json().catch(()=>({ok:r.ok})));
+  const toast=(t)=>{const e=document.getElementById('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1800)};
+  let dragging=false;
   function wireBoard(){
-    document.querySelectorAll('.card').forEach(c=>c.addEventListener('dragstart',e=>e.dataTransfer.setData('text',c.dataset.file)));
+    document.querySelectorAll('.card').forEach(c=>{
+      c.addEventListener('dragstart',e=>{dragging=true;e.dataTransfer.setData('text',c.dataset.file)});
+      c.addEventListener('dragend',()=>{dragging=false;document.getElementById('dropzone').classList.remove('active')});
+    });
     document.querySelectorAll('.col').forEach(col=>{
       col.addEventListener('dragover',e=>{e.preventDefault();col.classList.add('drop')});
       col.addEventListener('dragleave',()=>col.classList.remove('drop'));
-      col.addEventListener('drop',async e=>{e.preventDefault();col.classList.remove('drop');
+      col.addEventListener('drop',async e=>{e.preventDefault();col.classList.remove('drop');dragging=false;
         await post('/move',{file:e.dataTransfer.getData('text'),column:col.dataset.column});refreshBoard()});
     });
     document.querySelectorAll('button[data-file]').forEach(b=>b.addEventListener('click',async()=>{
@@ -274,11 +288,11 @@ function pageHtml() {
       await post('/reply',{file:b.dataset.file,text:t.value});b.textContent='saved';setTimeout(refreshBoard,400)}));
   }
   async function refreshBoard(){
-    const focused=document.activeElement;
-    if(focused&&focused.tagName==='TEXTAREA'&&focused.id!=='draft')return;
+    const f=document.activeElement;
+    if(f&&f.tagName==='TEXTAREA')return;
     const r=await fetch('/board');document.getElementById('board').innerHTML=await r.text();wireBoard();
     const s=await (await fetch('/meta')).json();
-    document.getElementById('stamp').textContent=s.stamp;document.getElementById('sess').textContent=s.session||'(no session found)';
+    document.getElementById('stamp').textContent=s.stamp+(s.session?' · '+s.session:'');
   }
   function addMsg(m){
     const d=document.createElement('div');d.className='msg '+m.role;
@@ -292,37 +306,43 @@ function pageHtml() {
   es.addEventListener('change',refreshBoard);
   es.addEventListener('chat',e=>addMsg(JSON.parse(e.data)));
   es.addEventListener('chat-history',e=>{JSON.parse(e.data).forEach(addMsg)});
-  const compose=document.getElementById('compose'),draft=document.getElementById('draft');
-  compose.addEventListener('dragover',e=>{e.preventDefault();compose.classList.add('drop')});
-  compose.addEventListener('dragleave',()=>compose.classList.remove('drop'));
-  compose.addEventListener('drop',async e=>{e.preventDefault();compose.classList.remove('drop');
+  // views
+  function setView(term){
+    document.getElementById('term').style.display=term?'':'none';
+    document.getElementById('msgs').style.display=term?'none':'block';
+    document.getElementById('v-term').classList.toggle('on',term);
+    document.getElementById('v-chat').classList.toggle('on',!term);
+  }
+  document.getElementById('v-term').addEventListener('click',()=>setView(true));
+  document.getElementById('v-chat').addEventListener('click',()=>setView(false));
+  // drop-to-terminal: any card drag activates the console dropzone
+  const zone=document.getElementById('dropzone'), consoleEl=document.getElementById('console');
+  document.addEventListener('dragover',e=>{
+    if(!dragging)return;
+    const r=consoleEl.getBoundingClientRect();
+    zone.classList.toggle('active',e.clientY>r.top);
+  });
+  zone.addEventListener('dragover',e=>e.preventDefault());
+  zone.addEventListener('drop',async e=>{
+    e.preventDefault();zone.classList.remove('active');dragging=false;
     const f=e.dataTransfer.getData('text');if(!f)return;
     const c=await (await fetch('/card?file='+encodeURIComponent(f))).json();
-    const block='[Context '+c.issue+' — "'+c.title+'" | '+c.column+(c.gate&&c.gate!=='null'?'/'+c.gate:'')+(c.pr&&c.pr!=='null'?' | PR '+c.pr:'')+' | '+c.url+']\\n';
-    draft.value=block+draft.value;draft.focus();
+    const block='[Context '+c.issue+' — "'+c.title+'" | '+c.column+(c.gate&&c.gate!=='null'?'/'+c.gate:'')+(c.pr&&c.pr!=='null'?' | PR '+c.pr:'')+' | '+c.url+'] ';
+    const r=await post('/send',{text:block});
+    if(r.ok){toast(c.issue+' → typed into session (review, then Enter)')}
+    else{await navigator.clipboard.writeText(block);toast('tmux not reachable — copied to clipboard');document.getElementById('termhint').style.display='block'}
   });
-  document.getElementById('copy').addEventListener('click',async()=>{
-    await navigator.clipboard.writeText(draft.value);
-    const b=document.getElementById('copy');b.textContent='copied';setTimeout(()=>b.textContent='copy',900);
+  // splitter (vertical drag)
+  const board=document.getElementById('board'), split=document.getElementById('splitter');
+  const saved=localStorage.getItem('marshSplit');board.style.height=(saved??'38')+'vh';
+  split.addEventListener('mousedown',e=>{
+    e.preventDefault();document.getElementById('term').style.pointerEvents='none';
+    const move=ev=>{const h=Math.min(80,Math.max(10,(ev.clientY-board.offsetTop)/window.innerHeight*100));
+      board.style.height=h+'vh';localStorage.setItem('marshSplit',h)};
+    const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);
+      document.getElementById('term').style.pointerEvents=''};
+    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
   });
-  document.getElementById('clear').addEventListener('click',()=>{draft.value=''});
-  document.getElementById('send').addEventListener('click',async()=>{
-    const b=document.getElementById('send');
-    const r=await post('/send',{text:draft.value});
-    b.textContent=r.ok?'sent':'no tmux?';setTimeout(()=>b.textContent='send',1200);
-    if(r.ok){draft.value='';}
-  });
-  function setView(term){
-    document.getElementById('msgs').style.display=term?'none':'';
-    document.getElementById('termwrap').style.display=term?'flex':'none';
-    document.getElementById('v-chat').classList.toggle('on',!term);
-    document.getElementById('v-term').classList.toggle('on',term);
-    const f=document.getElementById('term');
-    if(term&&f.src==='about:blank')f.src=${JSON.stringify(TERM_URL)};
-  }
-  document.getElementById('v-chat').addEventListener('click',()=>setView(false));
-  document.getElementById('v-term').addEventListener('click',()=>setView(true));
-  document.getElementById('toggle').addEventListener('click',()=>document.getElementById('console').classList.toggle('hidden'));
   refreshBoard();
 </script>`;
 }
@@ -356,8 +376,8 @@ createServer(async (req, res) => {
       res.writeHead(200, { 'content-type': 'text/html' }).end(boardHtml());
     } else if (url.pathname === '/meta') {
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({
-        stamp: `${new Date().toISOString()} · ${cards().length} cards · ${CARDS_DIR}`,
-        session: sessionPath ? basename(sessionPath) : null,
+        stamp: `${new Date().toISOString().slice(0, 16)}Z · ${cards().length} cards`,
+        session: sessionPath ? basename(sessionPath).slice(0, 8) : null,
       }));
     } else if (url.pathname === '/card') {
       const c = parseCard(safePath(url.searchParams.get('file')));
@@ -370,16 +390,14 @@ createServer(async (req, res) => {
     } else if (url.pathname === '/move' && req.method === 'POST') {
       const { file, column } = await body(req);
       moveCard(file, column);
-      res.writeHead(200).end('ok');
+      res.writeHead(200, { 'content-type': 'application/json' }).end('{"ok":true}');
     } else if (url.pathname === '/reply' && req.method === 'POST') {
       const { file, text } = await body(req);
       writeReply(file, text ?? '');
-      res.writeHead(200).end('ok');
+      res.writeHead(200, { 'content-type': 'application/json' }).end('{"ok":true}');
     } else if (url.pathname === '/send' && req.method === 'POST') {
       const { text } = await body(req);
       if (!text?.trim()) throw new Error('empty');
-      // Literal keystrokes into the tmux session — never appends Enter; the
-      // operator reviews and submits in the terminal themselves.
       execFile('tmux', ['send-keys', '-t', TMUX, '-l', text], (err) => {
         res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: !err, err: err ? String(err.message) : null }));
       });
@@ -388,5 +406,5 @@ createServer(async (req, res) => {
     res.writeHead(400).end(String(e.message ?? e));
   }
 }).listen(PORT, '127.0.0.1', () =>
-  console.log(`marsh serve → http://127.0.0.1:${PORT}  (cards: ${CARDS_DIR}, session: ${sessionPath ?? 'none found'})`)
+  console.log(`marsh serve → http://127.0.0.1:${PORT}  (cards: ${CARDS_DIR}, tmux: ${TMUX}, session: ${sessionPath ?? 'none'})`)
 );
