@@ -192,6 +192,9 @@ def main() -> int:
     if not argv:
         print(__doc__, file=sys.stderr)
         return 2
+    if "/jobs/" in argv[0] or "/tmp/" in argv[0]:
+        print(f"WARN: snapshot {argv[0]} is in ephemeral storage — canonical home is {SNAPSHOT} "
+              f"(use --set for incremental updates)", file=sys.stderr)
     snapshot = json.loads(Path(argv[0]).read_text())
     cards_dir = Path(argv[2] if len(argv) > 2 and argv[1] == "--cards-dir" else "workbench/cards")
     cards_dir.mkdir(parents=True, exist_ok=True)

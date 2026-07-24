@@ -76,6 +76,11 @@ any pass can crash and a successor rehydrates entirely from status + comments.
   belong in the PR body (`Closes X` magic words are fine).
 - **Elicitation.** Posting `marsh:elicitation` parks the issue (wake condition:
   reply on that comment). Parked issues consume no WIP.
+- **Ledger-write pairing.** Any pass that writes the ledger (comment, status
+  change, issue creation) projects that issue's card **in the same block** —
+  `project_cards.py --set <ID> ...` is one line. The board must never trail
+  the ledger. (Wave 2: an entire incident — APP-275 + four sweep issues —
+  was ledgered but invisible on the board until the operator noticed.)
 
 ## 5. Status transitions Marsh may perform
 
@@ -101,6 +106,11 @@ A pass rehydrates in this order — cheap to expensive:
 5. Matching runbooks for services the plan touches.
 
 Trust order on conflict: human replies > repo/git state > ledger > db cache.
+
+**Freshness rule for assumed state**: the operator acts out-of-band — files
+issues, adds labels, flips PRs to ready — between your reads. Before acting on
+state you last wrote or read (an issue's status, a PR's draft-ness, label
+sets), re-fetch it. Never treat your own last write as current truth.
 
 ## 7. Identity
 

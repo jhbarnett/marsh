@@ -69,6 +69,14 @@ carry into the PR body as known findings and exit DONE_WITH_CONCERNS.
 1. Commit (repo's message conventions; include `Co-Authored-By` if the repo
    uses it), `push -u`, `gh pr create --draft` — body: summary, plan link,
    verification evidence, panel findings, deviations, `Closes <issue-id>`.
+   **Title lint (hard rule, include verbatim in every implement-agent
+   dispatch): neither the commit subject nor the PR title may contain an
+   issue identifier** — check both against `[A-Z]+-[0-9]+` before pushing.
+   Linear attaches by title and can yank statuses (CORE-939, then again on
+   #1959/#1181 after the rule existed but wasn't in the dispatch template).
+   After the PR attaches, Linear's Git automation may race your status
+   write — re-fetch the issue and re-save if reverted
+   (taxonomy `linearQuirks.gitAutomationRace`).
 2. Status → In Review; post `marsh:verification` comment (v2) with the gate
    evidence, panel counts, and PR URL in refs.
 3. **Project the card**: write the issue snapshot to `var/` and run

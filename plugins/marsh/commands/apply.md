@@ -41,6 +41,9 @@ or approve individually (`policy.humanOnlyWrites`).
   the report, never a third identical attempt.
 - Issues Marsh files or activates get `policy.defaults` (assignee, cycle
   placement) unless the proposal says otherwise.
+- **Ledger-write pairing** (protocol.md §4): every applied change and every
+  filed issue gets its card projected in the same block —
+  `project_cards.py --set <ID> ...`. The board never trails the ledger.
 - Append an "Applied" section to the digest: counts by category, identifier
   remaps, failures with reasons, and the human-only checklist.
 
