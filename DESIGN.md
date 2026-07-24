@@ -313,7 +313,17 @@ clones, runs `/marsh sync`, fills `registry.json`, and tunes `policy.json`.
   verify-gate evidence artifacts.
 - **Phase 4** — full risk matrix; discovery duty (with clickable prototypes);
   Marsh identities (Linear agent app, GitHub account); scheduled shifts.
-- **Phase 5** — weakness mining and policy-tuning PRs (self-improvement);
+- **Phase 5** — weakness mining and policy-tuning PRs (self-improvement),
+  with a **regression-eval harness** before any prompt amendment ships:
+  ~20 ground-truth cases per station harvested from station_passes/resolved
+  issues, replayed against the amended prompt, per-class score diff in the
+  PR body (cookbook: prompt-versioning-and-rollback, building-evals);
+  **programmatic prefetch** for issue-iterating stations (batch the Linear
+  reads in code, hand agents ~500-token briefs — PTC pattern, read-only
+  stations only); event-driven wakes for parked_tasks (webhook/file-watch
+  instead of shift-start polling); quarterly re-check of the Managed Agents
+  platform (outcome graders, version pinning, memory stores are becoming
+  hosted primitives — shed hand-rolled layers as the platform absorbs them);
   serve v2 cockpit: an Agent-SDK-hosted operator session embedded in the
   board — streaming conversation with an input box (not just the v1
   read-only tail), card drag-in as first-class context, terminal optional.

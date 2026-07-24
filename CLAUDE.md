@@ -18,6 +18,11 @@ instance bindings in `config/`. Durable state lives in Linear (ledger),
 
 # Compact instructions
 
+Preservation priority when space forces choices: user corrections and
+decisions > errors and their exact messages > active work state > completed
+work (summarize freely). Exact identifiers (issues, PRs, branches, paths)
+are always kept verbatim at every tier.
+
 When compacting (automatic or manual), preserve verbatim:
 - Active issue IDs with their current station, gate state, and typed exit
   status; branch/worktree paths and PR URLs.

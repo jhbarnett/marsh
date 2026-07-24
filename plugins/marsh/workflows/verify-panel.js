@@ -32,10 +32,11 @@ const FINDINGS_SCHEMA = {
 
 const VERDICT_SCHEMA = {
   type: 'object',
-  required: ['verdict', 'reason'],
+  required: ['verdict', 'reason', 'severity'],
   properties: {
     verdict: { type: 'string', enum: ['CONFIRMED', 'REJECTED'] },
     reason: { type: 'string', maxLength: 300 },
+    severity: { type: 'string', enum: ['BLOCKER', 'MAJOR', 'MINOR'], description: 're-derived from the plan contract and risk policy — do NOT inherit the reviewer score' },
   },
 }
 
@@ -66,6 +67,7 @@ const reviewed = await pipeline(
         `You are one lens of an adversarial review panel for issue ${args?.issueId}. Lens: ${lens.key} — ${lens.focus}.`,
         context,
         `Report ONLY findings visible in this diff (not pre-existing issues), high-signal only: a finding must name a concrete defect with file:line evidence.`,
+        `Quality tier rule: report HIGH VALUE only — a defect a reviewer would act on. LOW VALUE observations (style, hypotheticals without a trigger, anything on the plan's out-of-scope list) are noted mentally and dropped; keep looking instead.`,
         `No findings is a valid result — do not manufacture nitpicks.`,
       ].join('\n\n'),
       { label: `review:${lens.key}`, phase: 'Review', schema: FINDINGS_SCHEMA }
@@ -80,9 +82,10 @@ const reviewed = await pipeline(
             `Finding (lens ${lens.key}): [${f.severity}] ${f.file}:${f.line} — ${f.claim}`,
             `Claimed evidence: ${f.evidence}`,
             `Verify in the actual worktree code (READ-ONLY). CONFIRMED only if the defect is real, in this diff, and matters.`,
+            `If CONFIRMED, re-derive severity yourself from the plan contract's acceptance criteria and blast radius — ignore the reviewer's score (overconfidence check).`,
           ].join('\n\n'),
           { label: `validate:${f.file}:${f.line}`, phase: 'Validate', schema: VERDICT_SCHEMA }
-        ).then((v) => ({ ...f, lens: lens.key, verdict: v }))
+        ).then((v) => ({ ...f, severity: v?.severity ?? f.severity, lens: lens.key, verdict: v }))
       )
     )
 )

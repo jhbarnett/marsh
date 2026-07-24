@@ -21,7 +21,14 @@ registry (path, notes, verify commands), and this contract:
 > anything anywhere. Deliverable:
 > 1. PLAN (markdown): scope; exact files to touch with per-file changes;
 >    API/service methods used or added (exact names/signatures); state
->    handling; acceptance criteria (testable); test plan; out of scope.
+>    handling; acceptance criteria; test plan; out of scope.
+>    Acceptance-criteria grammar (the verify station grades mechanically
+>    against these): each criterion must be **evidence-checkable** — a
+>    measurable artifact or behavior ("endpoint returns 403 for cross-tenant
+>    id", never "handles auth correctly") — and carry its **verification
+>    protocol** (the exact command/check that proves it). Include an
+>    explicit **out-of-scope / ignore list** that verifiers must respect —
+>    it exists to stop scope-creep relitigating.
 > 2. CLAIM CHECKS: each factual claim from the issue you verified, with
 >    file:line evidence — and any claim that turned out false.
 > 3. OPEN QUESTIONS: anything that genuinely needs the human (empty if none).
