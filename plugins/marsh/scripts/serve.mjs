@@ -158,12 +158,6 @@ function pageHtml() {
   #splitter:hover{background:var(--accent)}
   #console{flex:1;min-width:300px;display:flex;flex-direction:column;position:relative;background:var(--bg)}
   #term{flex:1;border:0;width:100%;background:var(--bg)}
-  #msgs{flex:1;overflow-y:auto;padding:4px 14px;display:none}
-  .msg{margin:7px 0;padding:7px 9px;border-radius:6px;background:color-mix(in srgb,var(--panel) 88%,var(--fg) 4%);white-space:pre-wrap;word-break:break-word}
-  .msg.you{border-left:3px solid var(--accent)}
-  .msg.marsh{border-left:3px solid var(--ok)}
-  .msg.sys{color:var(--dim);font-size:11px;background:none;padding:1px 8px}
-  .msg .who{font-size:10px;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
   #dropzone{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 72%,transparent);border:2px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:14px;z-index:5}
   #dropzone.active{display:flex}
   #toast{position:fixed;bottom:14px;right:14px;background:var(--panel);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:7px 12px;font-size:12px;opacity:0;transition:opacity .25s;z-index:9}
@@ -301,5 +295,5 @@ createServer(async (req, res) => {
     res.writeHead(400).end(String(e.message ?? e));
   }
 }).listen(PORT, '127.0.0.1', () =>
-  console.log(`marsh serve → http://127.0.0.1:${PORT}  (cards: ${CARDS_DIR}, tmux: ${TMUX}, session: ${sessionPath ?? 'none'})`)
+  console.log(`marsh serve → http://127.0.0.1:${PORT}  (cards: ${CARDS_DIR}, tmux: ${TMUX})`)
 );
