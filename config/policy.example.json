@@ -54,6 +54,16 @@
       "verify": "inherit"
     }
   },
+  "defaults": {
+    "assignee": "jason",
+    "addActivatedIssuesToCurrentCycle": true
+  },
+  "humanOnlyWrites": [
+    "cancel-issue",
+    "reassign-away-from-human",
+    "label-creation",
+    "anything-permission-classifier-blocks"
+  ],
   "witness": {
     "stuckThresholdHours": {
       "started": 24,

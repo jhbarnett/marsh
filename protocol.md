@@ -42,6 +42,9 @@ any pass can crash and a successor rehydrates entirely from status + comments.
 - `refs` may carry branch, PR URL, worktree, report paths, evidence links.
 - Parsing: last ```` ```marsh ```` fence in the comment body; v1 HTML-comment
   headers may exist in comments from 2026-07-23 — treat as legacy, best-effort.
+- **Freshness rule**: any pass that posts ledger comments re-reads this file
+  (hub main checkout, not a worktree copy) immediately before its first
+  write of the session — the protocol can change under a live session.
 
 ## 3. Comment types
 

@@ -23,7 +23,13 @@ issues per sweep).
 3. **Fetch dedupe context**: titles + identifiers of open issues per team
    (up to ~150/team, minimal fields).
 4. **Run the workflow**: invoke the Workflow tool with
-   `scriptPath: ${CLAUDE_PLUGIN_ROOT}/workflows/triage-sweep.js` and args:
+   `scriptPath: ${CLAUDE_PLUGIN_ROOT}/workflows/triage-sweep.js` and args.
+   The payload MUST include `validLabels` — the taxonomy's complete label set —
+   and `statusRules` from the taxonomy (classifiers may only propose from
+   these; this is contract, not implementation detail). If the Workflow tool
+   rejects an args payload, materialize an instance script instead: copy the
+   workflow file and prepend `const args = {...payload...}` (write it under
+   `var/`, never edit the plugin copy). Args:
    ```json
    {
      "issues": [ { "identifier": "...", "title": "...", "description": "...", "labels": [], "team": "...", "url": "..." } ],

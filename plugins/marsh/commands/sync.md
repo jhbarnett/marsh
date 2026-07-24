@@ -14,7 +14,11 @@ Arguments: `$ARGUMENTS` (`--check` = report drift only, write nothing).
 ## Steps
 
 1. **Introspect** the Linear workspace via the Linear MCP tools:
-   - `list_teams` — all teams.
+   - `list_teams` — all teams; then `get_team` on each to capture
+     parent/child hierarchy (`list_teams` does not expose it). Record
+     `teamHierarchy` and what it implies for intake (parent teams are often
+     shared funnels whose triage routes to sub-teams — routing out is then
+     by design, not an anomaly).
    - `list_issue_statuses` for each team — record name → status *type* mappings.
    - `list_issue_labels` (workspace-wide, and note team-scoped labels) — record
      label groups (parent) and members.
