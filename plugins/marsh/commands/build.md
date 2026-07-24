@@ -72,7 +72,11 @@ carry into the PR body as known findings and exit DONE_WITH_CONCERNS.
 2. Status → In Review; post `marsh:verification` comment (v2) with the gate
    evidence, panel counts, and PR URL in refs.
 3. **Project the card**: write the issue snapshot to `var/` and run
-   `project_cards.py` so the workbench reflects the exit state.
+   `project_cards.py` so the workbench reflects the exit state — with
+   `gate: null`. A shipped draft PR is the in-review column (normal review
+   backlog), not an awaiting-decision gate; `gate` is reserved for decisions
+   that block Marsh mid-flight (plan approval, elicitation, takeover,
+   deviation sign-off).
 4. Controller report (data, not prose): STATUS
    (DONE | DONE_WITH_CONCERNS | BLOCKED), PR URL, branch, files changed with
    +/- counts, verify-gate tail, deviations and why, concerns.

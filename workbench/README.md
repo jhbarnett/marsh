@@ -41,6 +41,14 @@ refs:
 <!-- Marsh-owned: recent station passes and consumed replies, newest first -->
 ```
 
+## Column semantics
+
+`awaiting-decision` = Marsh is **blocked mid-flight on your input** (`gate`
+set: plan-approval, elicitation, takeover, deviation) — stalled WIP, drain
+first. `in-review` = Marsh **finished and handed off** (draft PR open,
+evidence posted; mirrors Linear "In Review") — your normal review backlog.
+Egress clears `gate`; a shipped PR is never an awaiting-decision card.
+
 ## Ownership rules
 
 - Marsh owns everything except **`## Your reply`**.
