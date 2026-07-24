@@ -7,9 +7,8 @@
 // Theme comes from workbench/theme.json (theme_sync.py extracts it from the
 // operator's terminal config); dark/light variants follow system appearance.
 import { createServer } from 'node:http';
-import { readFileSync, writeFileSync, readdirSync, watch, existsSync, statSync, openSync, readSync, closeSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, watch, existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
-import { homedir } from 'node:os';
 import { execFile } from 'node:child_process';
 
 const args = process.argv.slice(2);
@@ -19,7 +18,6 @@ const flag = (name, dflt) => {
 };
 const CARDS_DIR = flag('dir', 'workbench/cards');
 const PORT = Number(flag('port', 4643));
-const SESSION = flag('session', null);
 const TERM_URL = flag('term', 'http://127.0.0.1:4644');
 const TMUX = flag('tmux', 'marsh');
 const COLUMNS = ['inbox', 'ready', 'in-progress', 'awaiting-decision', 'in-review', 'done'];
@@ -100,96 +98,6 @@ function writeReply(file, text) {
   writeFileSync(p, readFileSync(p, 'utf8').replace(/(^## Your reply\n)[\s\S]*?(?=^## )/m, `$1${text.trim()}\n\n`));
 }
 
-// ---------- session transcript tail ----------
-function findSession() {
-  if (SESSION) return SESSION;
-  const root = join(homedir(), '.claude', 'projects');
-  let best = null;
-  try {
-    for (const d of readdirSync(root)) {
-      if (!d.includes('local-marsh')) continue;
-      const dir = join(root, d);
-      for (const f of readdirSync(dir)) {
-        if (!f.endsWith('.jsonl')) continue;
-        const p = join(dir, f);
-        const mt = statSync(p).mtimeMs;
-        if (!best || mt > best.mt) best = { p, mt };
-      }
-    }
-  } catch { /* no sessions */ }
-  return best?.p ?? null;
-}
-
-function extractMsg(row) {
-  try {
-    if (row.type === 'assistant') {
-      const parts = (row.message?.content ?? []).filter((c) => c.type === 'text').map((c) => c.text);
-      const text = parts.join('\n').trim();
-      if (text) return { role: 'marsh', text };
-    } else if (row.type === 'user') {
-      const c = row.message?.content;
-      let text = '';
-      if (typeof c === 'string') text = c;
-      else if (Array.isArray(c) && !c.some((x) => x.type === 'tool_result'))
-        text = c.filter((x) => x.type === 'text').map((x) => x.text).join('\n');
-      text = text.trim();
-      if (text && !text.startsWith('<')) return { role: 'you', text };
-    }
-  } catch { /* skip malformed */ }
-  return null;
-}
-
-const ring = [];
-let sessionPath = findSession();
-let offset = 0;
-if (sessionPath && existsSync(sessionPath)) {
-  const size = statSync(sessionPath).size;
-  const start = Math.max(0, size - 200_000);
-  const fd = openSync(sessionPath, 'r');
-  const buf = Buffer.alloc(size - start);
-  readSync(fd, buf, 0, buf.length, start);
-  closeSync(fd);
-  for (const l of buf.toString('utf8').split('\n').slice(start > 0 ? 1 : 0)) {
-    if (!l.trim()) continue;
-    try { const msg = extractMsg(JSON.parse(l)); if (msg) pushMsg(msg, false); } catch { /* skip */ }
-  }
-  offset = size;
-}
-
-function pushMsg(msg, broadcast = true) {
-  msg.text = msg.text.length > 4000 ? msg.text.slice(0, 4000) + ' …[truncated]' : msg.text;
-  ring.push(msg);
-  if (ring.length > 200) ring.shift();
-  if (broadcast) sse('chat', msg);
-}
-
-let partial = '';
-setInterval(() => {
-  const latest = findSession();
-  if (latest && latest !== sessionPath) {
-    sessionPath = latest;
-    offset = statSync(latest).size;
-    partial = '';
-    pushMsg({ role: 'sys', text: `switched to session ${basename(latest)}` });
-    return;
-  }
-  if (!sessionPath || !existsSync(sessionPath)) return;
-  const size = statSync(sessionPath).size;
-  if (size <= offset) return;
-  const fd = openSync(sessionPath, 'r');
-  const buf = Buffer.alloc(size - offset);
-  readSync(fd, buf, 0, buf.length, offset);
-  closeSync(fd);
-  offset = size;
-  const chunk = partial + buf.toString('utf8');
-  const lines = chunk.split('\n');
-  partial = lines.pop() ?? '';
-  for (const l of lines) {
-    if (!l.trim()) continue;
-    try { const msg = extractMsg(JSON.parse(l)); if (msg) pushMsg(msg); } catch { /* skip */ }
-  }
-}, 1000);
-
 // ---------- html ----------
 function cardHtml(c) {
   const badge = (t, cls) => (t && t !== 'null' ? `<span class="badge ${cls}">${esc(t)}</span>` : '');
@@ -264,14 +172,12 @@ function pageHtml() {
   .hint{font-size:10px;color:var(--dim);padding:3px 14px}
 </style>
 <header><h1>marsh</h1><span id="stamp"></span>
-  <div class="hbtns"><button id="v-term" class="view on">terminal</button><button id="v-chat" class="view">transcript</button>
-  <a id="term-pop" href="${esc(TERM_URL)}" target="_blank" title="open terminal in its own tab">↗</a></div></header>
+  <div class="hbtns"><a id="term-pop" href="${esc(TERM_URL)}" target="_blank" title="open terminal in its own tab">↗</a></div></header>
 <div id="main">
 <div id="board"></div>
 <div id="splitter"></div>
 <div id="console">
   <iframe id="term" src="${esc(TERM_URL)}"></iframe>
-  <div id="msgs"></div>
   <div class="hint" id="termhint" style="display:none">terminal blank? <code>plugins/marsh/scripts/marsh-up.sh</code> brings up tmux+claude+ttyd+serve</div>
   <div id="dropzone">drop to type context into the session</div>
 </div>
@@ -301,29 +207,10 @@ function pageHtml() {
     if(f&&f.tagName==='TEXTAREA')return;
     const r=await fetch('/board');document.getElementById('board').innerHTML=await r.text();wireBoard();
     const s=await (await fetch('/meta')).json();
-    document.getElementById('stamp').textContent=s.stamp+(s.session?' · '+s.session:'');
-  }
-  function addMsg(m){
-    const d=document.createElement('div');d.className='msg '+m.role;
-    if(m.role!=='sys'){const w=document.createElement('div');w.className='who';w.textContent=m.role==='you'?'you':'marsh';d.appendChild(w)}
-    d.appendChild(document.createTextNode(m.text));
-    const box=document.getElementById('msgs');const stick=box.scrollTop+box.clientHeight>=box.scrollHeight-40;
-    box.appendChild(d);while(box.children.length>200)box.removeChild(box.firstChild);
-    if(stick)box.scrollTop=box.scrollHeight;
+    document.getElementById('stamp').textContent=s.stamp;
   }
   const es=new EventSource('/events');
   es.addEventListener('change',refreshBoard);
-  es.addEventListener('chat',e=>addMsg(JSON.parse(e.data)));
-  es.addEventListener('chat-history',e=>{JSON.parse(e.data).forEach(addMsg)});
-  // views
-  function setView(term){
-    document.getElementById('term').style.display=term?'':'none';
-    document.getElementById('msgs').style.display=term?'none':'block';
-    document.getElementById('v-term').classList.toggle('on',term);
-    document.getElementById('v-chat').classList.toggle('on',!term);
-  }
-  document.getElementById('v-term').addEventListener('click',()=>setView(true));
-  document.getElementById('v-chat').addEventListener('click',()=>setView(false));
   // drop-to-terminal: any card drag activates the console dropzone
   const zone=document.getElementById('dropzone'), consoleEl=document.getElementById('console');
   document.addEventListener('dragover',e=>{
@@ -386,14 +273,13 @@ createServer(async (req, res) => {
     } else if (url.pathname === '/meta') {
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({
         stamp: `${new Date().toISOString().slice(0, 16)}Z · ${cards().length} cards`,
-        session: sessionPath ? basename(sessionPath).slice(0, 8) : null,
       }));
     } else if (url.pathname === '/card') {
       const c = parseCard(safePath(url.searchParams.get('file')));
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(c));
     } else if (url.pathname === '/events') {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
-      res.write(`event: chat-history\ndata: ${JSON.stringify(ring)}\n\n`);
+      res.write('\n');
       clients.add(res);
       req.on('close', () => clients.delete(res));
     } else if (url.pathname === '/move' && req.method === 'POST') {
