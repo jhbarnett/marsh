@@ -17,9 +17,18 @@ URL. The server only ever rewrites a card's `column:` line (drag) or its
 "## Your reply" zone (inline edit) — Marsh-owned sections are untouchable
 through this surface.
 
-The **console pane** (toggle top-right) tails the newest local-marsh session
-transcript read-only and streams the conversation beside the board; drag a
-card onto the compose box to insert a context block, then copy → paste into
-the session terminal. When more than one Marsh session is running, pin the
-pane with `--session <path-to-transcript.jsonl>` — auto-discovery follows
-whichever session wrote most recently and will flip between concurrent ones.
+The **console pane** (toggle top-right) has two views:
+- **transcript** — tails the newest local-marsh session transcript read-only.
+  With multiple sessions running, pin via `--session <transcript.jsonl>` —
+  auto-discovery follows whichever wrote most recently.
+- **terminal** — embeds the real session over ttyd (fully interactive).
+  Setup: `brew install ttyd tmux`, run the Marsh session inside tmux
+  (`tmux new -A -s marsh`, then `claude` — or `claude --resume` to migrate an
+  existing session), then `ttyd -W -p 4644 tmux attach -t marsh`. Flags:
+  `--term <url>` (default `http://127.0.0.1:4644`), `--tmux <name>`
+  (default `marsh`).
+
+The compose box works with both: drag a card in for a context block, then
+**send** (types the text into the tmux session via `send-keys` — never
+presses Enter; you review and submit in the terminal) or **copy** for manual
+paste.

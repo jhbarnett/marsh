@@ -11,6 +11,7 @@ import { createServer } from 'node:http';
 import { readFileSync, writeFileSync, readdirSync, watch, existsSync, statSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { homedir } from 'node:os';
+import { execFile } from 'node:child_process';
 
 const args = process.argv.slice(2);
 const flag = (name, dflt) => {
@@ -20,6 +21,8 @@ const flag = (name, dflt) => {
 const CARDS_DIR = flag('dir', 'workbench/cards');
 const PORT = Number(flag('port', 4643));
 const SESSION = flag('session', null);
+const TERM_URL = flag('term', 'http://127.0.0.1:4644');
+const TMUX = flag('tmux', 'marsh');
 const COLUMNS = ['inbox', 'ready', 'in-progress', 'awaiting-decision', 'in-review', 'done'];
 
 const esc = (s) =>
@@ -229,17 +232,30 @@ function pageHtml() {
   .compose .hint{font-size:10px;color:#666;margin-bottom:4px}
   .compose .row{display:flex;gap:8px}
   .compose button.alt{background:#333;color:#ddd}
+  .views{margin-left:auto;display:inline-flex;gap:4px;align-items:center}
+  .view{background:#222;color:#888;border:1px solid #333;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:10px}
+  .view.on{background:#333;color:#ddd}
+  #term-pop{color:#8ab4f8;text-decoration:none;font-size:12px;margin-left:2px}
+  #termwrap{flex:1;display:flex;flex-direction:column;min-height:0}
+  #term{flex:1;border:0;background:#000;width:100%}
+  code{background:#222;padding:0 4px;border-radius:3px}
 </style>
 <header><h1>marsh workbench</h1><span id="stamp"></span><button id="toggle">console</button></header>
 <main>
   <div class="board" id="board"></div>
   <div class="console" id="console">
-    <h2>session <small id="sess"></small></h2>
+    <h2>session <small id="sess"></small>
+      <span class="views"><button id="v-chat" class="view on">transcript</button><button id="v-term" class="view">terminal</button>
+      <a id="term-pop" href="${esc(TERM_URL)}" target="_blank" title="open terminal in its own tab">↗</a></span></h2>
     <div id="msgs"></div>
+    <div id="termwrap" style="display:none">
+      <iframe id="term" src="about:blank"></iframe>
+      <div class="hint" style="padding:4px 12px">blank? start it: <code>tmux new -A -s ${esc(TMUX)}</code> (run claude inside) then <code>ttyd -W -p 4644 tmux attach -t ${esc(TMUX)}</code></div>
+    </div>
     <div class="compose" id="compose">
-      <div class="hint">drop cards here for context · compose, then copy → paste into your Marsh terminal</div>
+      <div class="hint">drop cards here for context · send types into the tmux session (no Enter) · copy for paste</div>
       <textarea id="draft" placeholder="Ask Marsh… (drag cards in for context)"></textarea>
-      <div class="row"><button id="copy">copy</button><button id="clear" class="alt">clear</button></div>
+      <div class="row"><button id="send">send</button><button id="copy" class="alt">copy</button><button id="clear" class="alt">clear</button></div>
     </div>
   </div>
 </main>
@@ -290,6 +306,22 @@ function pageHtml() {
     const b=document.getElementById('copy');b.textContent='copied';setTimeout(()=>b.textContent='copy',900);
   });
   document.getElementById('clear').addEventListener('click',()=>{draft.value=''});
+  document.getElementById('send').addEventListener('click',async()=>{
+    const b=document.getElementById('send');
+    const r=await post('/send',{text:draft.value});
+    b.textContent=r.ok?'sent':'no tmux?';setTimeout(()=>b.textContent='send',1200);
+    if(r.ok){draft.value='';}
+  });
+  function setView(term){
+    document.getElementById('msgs').style.display=term?'none':'';
+    document.getElementById('termwrap').style.display=term?'flex':'none';
+    document.getElementById('v-chat').classList.toggle('on',!term);
+    document.getElementById('v-term').classList.toggle('on',term);
+    const f=document.getElementById('term');
+    if(term&&f.src==='about:blank')f.src=${JSON.stringify(TERM_URL)};
+  }
+  document.getElementById('v-chat').addEventListener('click',()=>setView(false));
+  document.getElementById('v-term').addEventListener('click',()=>setView(true));
   document.getElementById('toggle').addEventListener('click',()=>document.getElementById('console').classList.toggle('hidden'));
   refreshBoard();
 </script>`;
@@ -343,6 +375,14 @@ createServer(async (req, res) => {
       const { file, text } = await body(req);
       writeReply(file, text ?? '');
       res.writeHead(200).end('ok');
+    } else if (url.pathname === '/send' && req.method === 'POST') {
+      const { text } = await body(req);
+      if (!text?.trim()) throw new Error('empty');
+      // Literal keystrokes into the tmux session — never appends Enter; the
+      // operator reviews and submits in the terminal themselves.
+      execFile('tmux', ['send-keys', '-t', TMUX, '-l', text], (err) => {
+        res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: !err, err: err ? String(err.message) : null }));
+      });
     } else res.writeHead(404).end();
   } catch (e) {
     res.writeHead(400).end(String(e.message ?? e));
