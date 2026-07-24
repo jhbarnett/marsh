@@ -38,9 +38,15 @@ function loadTheme() {
   catch { return { source: 'default', dark: FALLBACK, light: FALLBACK }; }
 }
 function cssVars(t) {
+  // Surfaces derive ONLY from bg/fg mixes — palette hues are accents. Using
+  // palette[0] (ANSI black) for panels broke light themes: ANSI black stays
+  // dark in a light theme, giving dark cards with dark text on a light page.
   const p = t.palette ?? FALLBACK.palette;
-  return `--bg:${t.background};--fg:${t.foreground};--panel:${p[0]};--sel:${t.selectionBg ?? p[8]};` +
-         `--dim:${p[8]};--accent:${p[4]};--ok:${p[2]};--warn:${p[3]};--err:${p[1]};--cursor:${t.cursor ?? t.foreground};`;
+  return `--bg:${t.background};--fg:${t.foreground};` +
+         `--panel:color-mix(in srgb,${t.background} 93%,${t.foreground} 7%);` +
+         `--border:color-mix(in srgb,${t.background} 76%,${t.foreground} 24%);` +
+         `--dim:color-mix(in srgb,${t.foreground} 55%,${t.background});` +
+         `--accent:${p[4]};--ok:${p[2]};--warn:${p[3]};--err:${p[1]};`;
 }
 
 // ---------- cards ----------
@@ -216,32 +222,33 @@ function pageHtml() {
   @media (prefers-color-scheme: light){:root{${cssVars(th.light)}}}
   *{box-sizing:border-box}
   body{font:13px/1.45 -apple-system,sans-serif;margin:0;background:var(--bg);color:var(--fg);height:100vh;display:flex;flex-direction:column;overflow:hidden}
-  header{padding:8px 16px;border-bottom:1px solid var(--sel);display:flex;gap:12px;align-items:baseline;flex-shrink:0}
+  header{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:baseline;flex-shrink:0}
   h1{font-size:14px;margin:0}#stamp{color:var(--dim);font-size:11px}
   .hbtns{margin-left:auto;display:flex;gap:6px;align-items:center}
-  .view{background:color-mix(in srgb,var(--panel) 80%,var(--fg) 4%);color:var(--dim);border:1px solid var(--sel);border-radius:4px;padding:2px 9px;cursor:pointer;font-size:11px}
+  .view{background:var(--panel);color:var(--dim);border:1px solid var(--border);border-radius:4px;padding:2px 9px;cursor:pointer;font-size:11px}
   .view.on{color:var(--fg);border-color:var(--dim)}
   #term-pop{color:var(--accent);text-decoration:none;font-size:13px}
-  #board{overflow-y:auto;padding:8px 12px;flex-shrink:0}
-  .col{display:flex;align-items:flex-start;border-bottom:1px solid color-mix(in srgb,var(--sel) 50%,transparent);padding:6px 0}
+  #main{display:flex;flex:1;min-height:0}
+  #board{overflow-y:auto;padding:8px 12px;width:60vw;min-width:280px;flex-shrink:0}
+  .col{display:flex;align-items:flex-start;border-bottom:1px solid var(--panel);padding:6px 0}
   .col:last-child{border-bottom:0}
-  .col h2{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:6px 0 0;width:118px;flex-shrink:0}
-  .col h2 span{margin-left:6px;color:var(--dim);opacity:.6}
+  .col h2{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:6px 0 0;width:112px;flex-shrink:0}
+  .col h2 span{margin-left:6px;opacity:.6}
   .col.drop{outline:2px dashed var(--ok);outline-offset:-2px;border-radius:6px}
   .cards{display:flex;flex-wrap:wrap;gap:8px;flex:1;min-height:34px}
-  .card{background:color-mix(in srgb,var(--panel) 88%,var(--fg) 5%);border:1px solid var(--sel);border-radius:6px;padding:7px 9px;width:236px;cursor:grab}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:7px 9px;width:236px;cursor:grab}
   .card .head{display:flex;gap:6px;align-items:center}.card a{color:var(--accent);text-decoration:none;font-weight:600}
   .title{margin:3px 0;color:var(--fg);font-size:12px}
-  .badge{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--sel);color:var(--fg)}
-  .badge.gate{background:color-mix(in srgb,var(--warn) 25%,var(--panel));color:var(--warn)}
-  .decision{border-left:3px solid var(--warn);padding:3px 8px;margin:5px 0;color:color-mix(in srgb,var(--warn) 60%,var(--fg));background:color-mix(in srgb,var(--warn) 8%,transparent);white-space:pre-wrap;font-size:12px}
+  .badge{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--bg);border:1px solid var(--border);color:var(--dim)}
+  .badge.gate{border-color:var(--warn);color:color-mix(in srgb,var(--warn) 70%,var(--fg))}
+  .decision{border-left:3px solid var(--warn);padding:3px 8px;margin:5px 0;color:var(--fg);background:color-mix(in srgb,var(--warn) 12%,var(--bg));white-space:pre-wrap;font-size:12px}
   .refs{margin-top:2px}.ref{font-size:11px;margin-right:6px;color:var(--accent)}
   details{margin-top:4px}summary{cursor:pointer;color:var(--dim);font-size:11px}
-  textarea{width:100%;min-height:52px;background:var(--bg);color:var(--fg);border:1px solid var(--sel);border-radius:4px;margin:5px 0 4px}
+  textarea{width:100%;min-height:52px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:4px;margin:5px 0 4px}
   button{background:var(--ok);color:var(--bg);border:0;border-radius:4px;padding:3px 10px;cursor:pointer}
-  #splitter{height:5px;background:var(--sel);cursor:row-resize;flex-shrink:0}
+  #splitter{width:5px;background:var(--border);cursor:col-resize;flex-shrink:0}
   #splitter:hover{background:var(--accent)}
-  #console{flex:1;min-height:120px;display:flex;flex-direction:column;position:relative;background:var(--bg)}
+  #console{flex:1;min-width:300px;display:flex;flex-direction:column;position:relative;background:var(--bg)}
   #term{flex:1;border:0;width:100%;background:var(--bg)}
   #msgs{flex:1;overflow-y:auto;padding:4px 14px;display:none}
   .msg{margin:7px 0;padding:7px 9px;border-radius:6px;background:color-mix(in srgb,var(--panel) 88%,var(--fg) 4%);white-space:pre-wrap;word-break:break-word}
@@ -251,14 +258,15 @@ function pageHtml() {
   .msg .who{font-size:10px;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
   #dropzone{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 72%,transparent);border:2px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:14px;z-index:5}
   #dropzone.active{display:flex}
-  #toast{position:fixed;bottom:14px;right:14px;background:var(--panel);color:var(--fg);border:1px solid var(--sel);border-radius:6px;padding:7px 12px;font-size:12px;opacity:0;transition:opacity .25s;z-index:9}
+  #toast{position:fixed;bottom:14px;right:14px;background:var(--panel);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:7px 12px;font-size:12px;opacity:0;transition:opacity .25s;z-index:9}
   #toast.show{opacity:1}
-  code{background:var(--sel);padding:0 4px;border-radius:3px}
+  code{background:var(--panel);border:1px solid var(--border);padding:0 4px;border-radius:3px}
   .hint{font-size:10px;color:var(--dim);padding:3px 14px}
 </style>
 <header><h1>marsh</h1><span id="stamp"></span>
   <div class="hbtns"><button id="v-term" class="view on">terminal</button><button id="v-chat" class="view">transcript</button>
   <a id="term-pop" href="${esc(TERM_URL)}" target="_blank" title="open terminal in its own tab">↗</a></div></header>
+<div id="main">
 <div id="board"></div>
 <div id="splitter"></div>
 <div id="console">
@@ -266,6 +274,7 @@ function pageHtml() {
   <div id="msgs"></div>
   <div class="hint" id="termhint" style="display:none">terminal blank? <code>plugins/marsh/scripts/marsh-up.sh</code> brings up tmux+claude+ttyd+serve</div>
   <div id="dropzone">drop to type context into the session</div>
+</div>
 </div>
 <div id="toast"></div>
 <script>
@@ -320,7 +329,7 @@ function pageHtml() {
   document.addEventListener('dragover',e=>{
     if(!dragging)return;
     const r=consoleEl.getBoundingClientRect();
-    zone.classList.toggle('active',e.clientY>r.top);
+    zone.classList.toggle('active',e.clientX>r.left);
   });
   zone.addEventListener('dragover',e=>e.preventDefault());
   zone.addEventListener('drop',async e=>{
@@ -332,13 +341,13 @@ function pageHtml() {
     if(r.ok){toast(c.issue+' → typed into session (review, then Enter)')}
     else{await navigator.clipboard.writeText(block);toast('tmux not reachable — copied to clipboard');document.getElementById('termhint').style.display='block'}
   });
-  // splitter (vertical drag)
+  // splitter: board left / session right, dragged horizontally
   const board=document.getElementById('board'), split=document.getElementById('splitter');
-  const saved=localStorage.getItem('marshSplit');board.style.height=(saved??'38')+'vh';
+  const saved=localStorage.getItem('marshSplitX');board.style.width=(saved??'60')+'vw';
   split.addEventListener('mousedown',e=>{
     e.preventDefault();document.getElementById('term').style.pointerEvents='none';
-    const move=ev=>{const h=Math.min(80,Math.max(10,(ev.clientY-board.offsetTop)/window.innerHeight*100));
-      board.style.height=h+'vh';localStorage.setItem('marshSplit',h)};
+    const move=ev=>{const w=Math.min(82,Math.max(18,ev.clientX/window.innerWidth*100));
+      board.style.width=w+'vw';localStorage.setItem('marshSplitX',w)};
     const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);
       document.getElementById('term').style.pointerEvents=''};
     document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
