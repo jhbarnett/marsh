@@ -1,6 +1,16 @@
 {
-  "description": "Marsh compaction telemetry — log compaction events to var/compactions.jsonl so weakness mining can correlate compactions with quality dips",
+  "description": "Marsh anchors: compaction telemetry (var/compactions.jsonl) + contract-freshness injection (running sessions learn when protocol/commands changed)",
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/contract-freshness.sh\""
+          }
+        ]
+      }
+    ],
     "PreCompact": [
       {
         "hooks": [
