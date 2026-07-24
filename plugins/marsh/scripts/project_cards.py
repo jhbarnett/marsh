@@ -182,6 +182,9 @@ def set_mode(argv) -> int:
 
 def main() -> int:
     argv = sys.argv[1:]
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__, file=sys.stderr)
+        return 0 if argv else 2
     if argv[:1] == ["--set"]:
         return set_mode(argv[1:])
     prune_days = 0
