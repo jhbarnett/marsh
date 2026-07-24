@@ -35,7 +35,13 @@
   },
   "escalation": {
     "maxAttemptsPerStation": 2,
-    "ladder": ["enrich-context", "change-approach", "decompose", "human"]
+    "ladder": ["enrich-context", "change-approach", "decompose", "human"],
+    "deviationRule": "any deviation from the approved plan on alwaysHuman-class work returns to the human before it lands in a commit or draft PR — never silently"
+  },
+  "stationConduct": {
+    "pollForeground": "never stop the turn to wait on long-running commands (CI, test suites, builds): poll in the foreground with bounded sleeps/checks until the result arrives or the timeout escalates",
+    "flakeRetries": 2,
+    "flakeRule": "a test failing intermittently across 2 reruns is a flake candidate: file/annotate an issue with the evidence; excluding it from the gate requires human approval, never a silent skip"
   },
   "budgets": {
     "perShiftTokens": 2000000,

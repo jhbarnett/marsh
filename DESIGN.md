@@ -111,6 +111,22 @@ The **sprint contract** rule: acceptance criteria are negotiated at plan time �
 the plan states what "done" means and the verify station holds the build to the
 plan's contract, not the builder's opinion (generator/evaluator separation).
 
+**Station conduct** (validated in the first dev-lane runs, 2026-07-23; canonical
+values in `policy.stationConduct`) — these rules are baked into every
+build/verify/plan station prompt:
+- **Poll in the foreground, never stop to wait.** A station pass does not end
+  its turn to "wait" on CI, test suites, or builds — it polls with bounded
+  checks until the result arrives or the timeout escalates. (Three stalls in
+  validation before this was hardened.)
+- **Flakes need two reruns and a paper trail.** An intermittent failure across
+  two reruns is a flake candidate: file/annotate the issue with evidence;
+  excluding it from the gate requires human approval — never a silent skip.
+- **Degraded gates are policy, not improvisation.** When a repo's canonical
+  gate is broken (registry `gateStatus`), the registry's `interimGate` defines
+  the accepted evidence basis — stations never invent their own substitute.
+- **Deviations on alwaysHuman-class work return to the human** before landing
+  in a commit or draft PR — never silently (`escalation.deviationRule`).
+
 ### 3.5 Runbooks (`runbooks/`)
 Captured operational procedures — the "signs"/lessons layer made first-class.
 One file per procedure (`runbooks/<service>/<task>.md`): frontmatter (service,
