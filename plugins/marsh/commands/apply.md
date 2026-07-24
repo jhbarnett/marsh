@@ -51,3 +51,5 @@ or approve individually (`policy.humanOnlyWrites`).
 
 End with `Next:` — e.g. `Next: apply the 3-item human-only checklist above,
 then /marsh:plan the N ready-but-planless issues`.
+
+Telemetry: after each pass, `sh "${CLAUDE_PLUGIN_ROOT}/scripts/log_pass.sh" <issue> apply <EXIT> "<one-line note incl. tool friction>"`.

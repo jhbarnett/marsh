@@ -49,3 +49,5 @@ workflow may be layered on top later. Load the registry entry and re-read
 
 End with `Next:` — e.g. `Next: human review of PR #N — evidence posted,
 recommend merge`, or the single unblocking action on BLOCKED.
+
+Telemetry: after each pass, `sh "${CLAUDE_PLUGIN_ROOT}/scripts/log_pass.sh" <issue> verify <EXIT> "<one-line note incl. tool friction>"`.

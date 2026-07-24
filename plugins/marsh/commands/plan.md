@@ -78,3 +78,5 @@ separately.
 End with `Next:` — e.g. `Next: reply on ENG-123's plan comment to approve —
 then /marsh:build ENG-123`, or `Next: /marsh:build ENG-124 (adversarial gate
 passed, no human gate required)`.
+
+Telemetry: after each pass, `sh "${CLAUDE_PLUGIN_ROOT}/scripts/log_pass.sh" <issue> plan <EXIT> "<one-line note incl. tool friction>"`.

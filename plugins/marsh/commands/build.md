@@ -93,3 +93,5 @@ carry into the PR body as known findings and exit DONE_WITH_CONCERNS.
 
 End with `Next:` — e.g. `Next: review draft PR #N (merge authority is
 human)`, or on BLOCKED the single unblocking action.
+
+Telemetry: after each pass, `sh "${CLAUDE_PLUGIN_ROOT}/scripts/log_pass.sh" <issue> build <EXIT> "<one-line note incl. tool friction>"`.
