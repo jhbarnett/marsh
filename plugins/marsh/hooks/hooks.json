@@ -1,0 +1,25 @@
+{
+  "description": "Marsh compaction telemetry — log compaction events to var/compactions.jsonl so weakness mining can correlate compactions with quality dips",
+  "hooks": {
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/log-compaction.sh\""
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/log-compaction.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

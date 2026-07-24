@@ -40,6 +40,7 @@
   },
   "stationConduct": {
     "pollForeground": "never stop the turn to wait on long-running commands (CI, test suites, builds): poll in the foreground with bounded sleeps/checks until the result arrives or the timeout escalates",
+    "contextStewardship": "route long outputs to files and reference paths; a pass approaching heavy context finishes its current unit, writes the handoff, and exits for a fresh wake — station passes never depend on compaction",
     "flakeRetries": 2,
     "flakeRule": "a test failing intermittently across 2 reruns is a flake candidate: file/annotate an issue with the evidence; excluding it from the gate requires human approval, never a silent skip"
   },

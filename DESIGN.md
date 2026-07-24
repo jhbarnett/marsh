@@ -126,6 +126,18 @@ build/verify/plan station prompt:
   the accepted evidence basis — stations never invent their own substitute.
 - **Deviations on alwaysHuman-class work return to the human** before landing
   in a commit or draft PR — never silently (`escalation.deviationRule`).
+- **Checkpoint beats compaction (token economy).** The ledger makes fresh
+  wakes cheap and lossless, so context pressure is answered by finishing the
+  current unit, writing the handoff, and restarting — not by summarizing a
+  full context (`stationConduct.contextStewardship`). For interactive
+  sessions where compaction does fire, the hub `CLAUDE.md` carries the
+  Compact instructions (preserve gate states/plan constraints/Next; drop
+  anything whose canonical copy is on disk or in the ledger) and the
+  post-compaction re-grounding rule; the plugin's PreCompact/PostCompact
+  hooks log events to `var/compactions.jsonl` for weakness mining. Native
+  limits (verified 2026-07-24): the auto-compact threshold is not
+  configurable and hooks cannot alter what compaction retains — CLAUDE.md
+  is the only steering channel.
 - **Relaxations decay; strictness is the default.** Station prompts hardcode
   no flake signatures, failure classes, or interim bars — they read them from
   the registry, so deleting an entry restores the full gate instantly. Every
