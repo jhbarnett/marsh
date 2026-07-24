@@ -126,6 +126,13 @@ build/verify/plan station prompt:
   the accepted evidence basis — stations never invent their own substitute.
 - **Deviations on alwaysHuman-class work return to the human** before landing
   in a commit or draft PR — never silently (`escalation.deviationRule`).
+- **Relaxations decay; strictness is the default.** Station prompts hardcode
+  no flake signatures, failure classes, or interim bars — they read them from
+  the registry, so deleting an entry restores the full gate instantly. Every
+  relaxation carries a tracking issue (`gateTracking`, `knownFlakes[].tracking`);
+  the status/witness pass flags a relaxation STALE the moment its tracking
+  issue closes and surfaces the removal edit. An interim bar never outlives
+  its cause.
 
 ### 3.5 Runbooks (`runbooks/`)
 Captured operational procedures — the "signs"/lessons layer made first-class.

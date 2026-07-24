@@ -21,11 +21,17 @@ You are Marsh's status pass. Read-only everywhere. Run from the marsh hub repo.
    - Started (in progress) and In Review, with `updatedAt` for staleness vs
      `policy.witness.stuckThresholdHours`
    - Issues labeled `plan-mia` (Scout plan-drafting queue depth)
-4. **Local state**:
+4. **Relaxation decay check**: for every registry relaxation (`gateStatus`/
+   `interimGate` via `gateTracking`, each `knownFlakes[].tracking`,
+   `knownEnvironmentalFailureClasses` via `gateTracking`), fetch the tracking
+   issue's status. Tracking issue completed or canceled → the relaxation is
+   **STALE**: list it under "Needs you" with the exact registry edit that
+   restores the full gate. A relaxation must never outlive its cause.
+5. **Local state**:
    - Parked tasks: `sqlite3 -json var/marsh.db "SELECT issue_id, lane, reason, wake_kind, parked_at FROM parked_tasks"`
    - Workbench: count cards per column in `workbench/cards/`; list cards with a
      non-empty "Your reply" zone (pending human commands not yet consumed).
-5. **Render the report** (terminal markdown):
+6. **Render the report** (terminal markdown):
    - One table: team × {triage, ready, in-progress, in-review, plan-mia}
    - Lanes vs WIP: current in-flight per lane against `policy.lanes`
    - **Needs you**: unconsumed card replies, issues past witness thresholds,
