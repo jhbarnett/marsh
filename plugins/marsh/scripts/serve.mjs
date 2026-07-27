@@ -252,7 +252,7 @@ function pageHtml() {
   .hint{font-size:10px;color:var(--dim);padding:3px 14px}
 </style>
 <header><img src="/avatar.svg" alt="" style="width:22px;height:22px;border-radius:50%"><h1>marsh</h1><span id="stamp"></span>
-  <div class="hbtns"><a id="term-pop" href="${esc(TERM_URL)}" target="_blank" title="open terminal in its own tab">↗</a></div></header>
+  <div class="hbtns"><button id="up" class="view" title="bring up tmux/claude/ttyd (idempotent)">▲ up</button><a id="term-pop" href="${esc(TERM_URL)}" target="_blank" title="open terminal in its own tab">↗</a></div></header>
 <div id="main">
 <div id="board"></div>
 <div id="splitter"></div>
@@ -303,6 +303,10 @@ function pageHtml() {
   }
   const es=new EventSource('/events');
   es.addEventListener('change',refreshBoard);
+  document.getElementById('up').addEventListener('click',async()=>{
+    const r=await post('/up',{});toast(r.ok?'stack up — reloading terminal':'bring-up failed');
+    if(r.ok)setTimeout(()=>{document.getElementById('term').src='/term/'},1500);
+  });
   // drop-to-terminal: any card drag activates the console dropzone
   const zone=document.getElementById('dropzone'), consoleEl=document.getElementById('console');
   document.addEventListener('dragover',e=>{
@@ -411,6 +415,11 @@ const server = createServer(async (req, res) => {
       const { file, text } = await body(req);
       writeReply(file, text ?? '');
       res.writeHead(200, { 'content-type': 'application/json' }).end('{"ok":true}');
+    } else if (url.pathname === '/up' && req.method === 'POST') {
+      // Self-heal from the PWA window: bring up tmux/claude/ttyd (idempotent).
+      execFile('sh', [join(import.meta.dirname, 'marsh-up.sh')], { env: { ...process.env, MARSH_NO_OPEN: '1' } }, (err, stdout) => {
+        res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: !err, log: String(stdout).slice(-400) }));
+      });
     } else if (url.pathname === '/send' && req.method === 'POST') {
       const { text } = await body(req);
       if (!text?.trim()) throw new Error('empty');

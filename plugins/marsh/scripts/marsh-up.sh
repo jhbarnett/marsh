@@ -36,8 +36,14 @@ fi
 sleep 1
 # Open as a chromeless app window when Chrome is available (dock-app feel);
 # MARSH_NO_OPEN=1 skips, MARSH_OPEN=tab forces a normal tab.
+PWA=""
+for d in "$HOME/Applications/Chrome Apps.localized" "$HOME/Applications/Chrome Apps"; do
+  [ -d "$d/Marsh.app" ] && PWA="$d/Marsh.app" && break
+done
 if [ -n "${MARSH_NO_OPEN:-}" ]; then
   :
+elif [ -n "$PWA" ]; then
+  open -a "$PWA"   # installed PWA: own dock identity (heron), not Chrome's
 elif [ "${MARSH_OPEN:-app}" = "app" ] && [ -d "/Applications/Google Chrome.app" ]; then
   open -na "Google Chrome" --args --app="http://127.0.0.1:$SERVE_PORT" 2>/dev/null || open "http://127.0.0.1:$SERVE_PORT"
 else
