@@ -56,13 +56,20 @@ before posting any comment.
 
 ## Panel review (after the gate, before shipping)
 
-Run the verify panel: Workflow with
-`scriptPath: ${CLAUDE_PLUGIN_ROOT}/workflows/verify-panel.js` and args
-`{repo, worktree, baseBranch, branch, issueId, planContract}` (panel lenses
-default sensibly; trim to 2 lenses for layups/docs). Confirmed BLOCKER →
-one fix round through the implement agent, re-gate, re-panel the fix; still
-blocked → report BLOCKED. Confirmed MAJOR/MINOR → fix if trivial, otherwise
-carry into the PR body as known findings and exit DONE_WITH_CONCERNS.
+**The panel is not optional and is never risk-scaled away.** Every build
+that ships a diff runs it — what scales is lens *count* (2 lenses for
+layups/docs; all four plus any policy `extraVerifiers` otherwise), never
+whether it runs. Substituting bespoke reviewers is allowed only IN ADDITION,
+not instead. (Wave-2 evidence: five panel-less ships → reviewer-caught
+defects on three PRs, including a privacy leak — a pseudonym preview
+rendering the user's real name.)
+
+Run: Workflow with `scriptPath: ${CLAUDE_PLUGIN_ROOT}/workflows/verify-panel.js`
+and args `{repo, worktree, baseBranch, branch, issueId, planContract}`.
+Confirmed BLOCKER → one fix round through the implement agent, re-gate,
+re-panel the fix; still blocked → report BLOCKED. Confirmed MAJOR/MINOR →
+fix if trivial, otherwise carry into the PR body as known findings and exit
+DONE_WITH_CONCERNS.
 
 ## Ship + exit
 

@@ -29,6 +29,10 @@ registry (path, notes, verify commands), and this contract:
 >    protocol** (the exact command/check that proves it). Include an
 >    explicit **out-of-scope / ignore list** that verifiers must respect —
 >    it exists to stop scope-creep relitigating.
+>    UI-affecting plans must include at least one criterion proving the
+>    change is USER-VISIBLE (what looks different, verified how — screenshot
+>    or described visual delta), or the build can pass every check while
+>    shipping nothing a user can see.
 > 2. CLAIM CHECKS: each factual claim from the issue you verified, with
 >    file:line evidence — and any claim that turned out false.
 > 3. OPEN QUESTIONS: anything that genuinely needs the human (empty if none).
