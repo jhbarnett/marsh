@@ -36,6 +36,15 @@ Arguments: `$ARGUMENTS` (`--check` = report drift only, write nothing).
 5. **Write** (unless `--check`): update `config/taxonomy.json`, preserving
    `openQuestions` that remain unresolved, setting `"confirmed": true` only when
    the user has explicitly confirmed this run's interpretations.
+6. **Seed `linearQuirks`** in the generated taxonomy — these are Linear-API
+   behaviors, not workspace-specific, learned in production: duplicate closes
+   are relation-only (never state+duplicateOf); label groups are
+   single-select; team moves assign new identifiers; team hierarchy only via
+   `get_team`; bare identifiers in comment text auto-expand to mentions
+   (machine headers go in code fences); identifiers in PR titles attach the
+   PR and can yank statuses; Git automation races status writes on PR attach;
+   oversized list results (~50K+ chars) spill to tool-result files and
+   page-limit counts are floors.
 
 ## Next step (required)
 
