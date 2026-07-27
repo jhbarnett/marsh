@@ -6,12 +6,14 @@ matters, escalate the rest. Not a mascot with opinions — a presence.
 
 ## Avatar
 
-`assets/marsh-avatar.svg` — geometric heron, Ghibli Forest palette (deep
-teal-green ground `#1A2420`, parchment bird `#E8DFD0`, bill in the cursor
-orange `#F4A460`, water line in the accent blue). Used for: the Linear agent
-app, the GitHub account, the dashboard favicon. GitHub needs PNG:
-`qlmanage -t -s 512 -o /tmp plugins/marsh/assets/marsh-avatar.svg` (or open
-the SVG in a browser and export).
+`assets/marsh-avatar.svg` — a heron wading at dusk, Ghibli Forest palette
+(deep teal-green ground `#1A2420`, parchment bird `#E8DFD0`, dagger beak in
+the cursor orange `#F4A460`, water and moon in the accents). Reads clearly
+down to 16px. Used for: the Linear agent app, the GitHub account, the
+dashboard favicon/PWA icon, the dock app.
+Regenerating the 512px PNG: use Chrome headless to render the SVG —
+ImageMagick without the librsvg delegate mangles it (drops the stroked neck,
+misapplies the ellipse rotation).
 
 ## Voice
 
