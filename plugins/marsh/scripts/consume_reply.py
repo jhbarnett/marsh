@@ -10,12 +10,19 @@ Usage:
 the ledger, then relies on the Log line as the archive).
 """
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPLY_RE = re.compile(r"(^## Your reply\n)([\s\S]*?)(?=^## )", re.M)
+# Hub-anchored default: workbench/ is gitignored hub state, so a cwd-relative
+# default silently reads an EMPTY dir when run from a worktree or elsewhere.
+HUB = Path(os.environ.get("MARSH_HUB") or Path(__file__).resolve().parents[3])
+
+# Reply zone ends at "## Log" specifically (not any "## ") so replies may
+# contain their own markdown headings without being truncated or lost.
+REPLY_RE = re.compile(r"(^## Your reply\n)([\s\S]*?)(?=^## Log$)", re.M)
 LOG_RE = re.compile(r"(^## Log\n)", re.M)
 COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
 PLACEHOLDER = (
@@ -35,7 +42,7 @@ def pending(path: Path):
 def main() -> int:
     args = sys.argv[1:]
     if args[:1] == ["--list"]:
-        cards_dir = Path(args[1] if len(args) > 1 else "workbench/cards")
+        cards_dir = Path(args[1]) if len(args) > 1 else HUB / "workbench" / "cards"
         out = []
         for f in sorted(cards_dir.glob("*.md")):
             text = pending(f)

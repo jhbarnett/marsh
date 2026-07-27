@@ -26,12 +26,19 @@ Cards are projections: everything is regenerated EXCEPT the human-owned
 Unconsumed replies are reported on stdout so the caller can act on them.
 """
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPLY_RE = re.compile(r"^## Your reply\n(.*?)(?=^## |\Z)", re.M | re.S)
+# Hub-anchored defaults: workbench/ and var/ are gitignored hub state, so
+# cwd-relative defaults silently miss them when run from a worktree.
+HUB = Path(os.environ.get("MARSH_HUB") or Path(__file__).resolve().parents[3])
+
+# Reply zone ends at "## Log" specifically (not any "## ") so replies may
+# contain their own markdown headings without being truncated or lost.
+REPLY_RE = re.compile(r"^## Your reply\n(.*?)(?=^## Log$)", re.M | re.S)
 LOG_RE = re.compile(r"^## Log\n(.*?)(?=^## |\Z)", re.M | re.S)
 COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
 
@@ -44,7 +51,7 @@ SEVERITY_MAP = {"Critical": "urgent", "High": "high", "Medium": "medium", "Low":
 
 def load_taxonomy():
     try:
-        return json.loads(Path("config/taxonomy.json").read_text())
+        return json.loads((HUB / "config" / "taxonomy.json").read_text())
     except (OSError, ValueError):
         return {}
 
@@ -156,7 +163,7 @@ def render(issue: dict, reply: str, log: str, now: str, gate_since: str = "") ->
     return "\n".join(fm + body)
 
 
-SNAPSHOT = Path("var/board-snapshot.json")
+SNAPSHOT = HUB / "var" / "board-snapshot.json"
 
 
 def set_mode(argv) -> int:
@@ -199,7 +206,7 @@ def main() -> int:
         print(f"WARN: snapshot {argv[0]} is in ephemeral storage — canonical home is {SNAPSHOT} "
               f"(use --set for incremental updates)", file=sys.stderr)
     snapshot = json.loads(Path(argv[0]).read_text())
-    cards_dir = Path(argv[2] if len(argv) > 2 and argv[1] == "--cards-dir" else "workbench/cards")
+    cards_dir = Path(argv[2]) if len(argv) > 2 and argv[1] == "--cards-dir" else HUB / "workbench" / "cards"
     cards_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 

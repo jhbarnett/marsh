@@ -8,8 +8,8 @@
 // operator's terminal config); dark/light variants follow system appearance.
 import { createServer, request as httpRequest } from 'node:http';
 import { connect as netConnect } from 'node:net';
-import { readFileSync, writeFileSync, readdirSync, watch, existsSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { readFileSync, writeFileSync, readdirSync, watch, existsSync, mkdirSync } from 'node:fs';
+import { join, basename, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 
 const args = process.argv.slice(2);
@@ -120,7 +120,10 @@ function parseCard(path) {
     branch: ref('branch'), pr: ref('pr'), artifacts,
     summary: zone('Summary'),
     decision: zone('Decision needed').replace(/<!--[\s\S]*?-->/g, '').trim(),
-    reply: zone('Your reply').replace(/<!--[\s\S]*?-->/g, '').trim(),
+    // Reply zone ends at "## Log" specifically (not any "## ") so replies may
+    // contain their own markdown headings without being truncated.
+    reply: (body.match(/^## Your reply\n([\s\S]*?)(?=^## Log$)/m)?.[1] ?? zone('Your reply'))
+      .replace(/<!--[\s\S]*?-->/g, '').trim(),
   };
 }
 
@@ -143,7 +146,13 @@ function moveCard(file, column) {
 
 function writeReply(file, text) {
   const p = safePath(file);
-  writeFileSync(p, readFileSync(p, 'utf8').replace(/(^## Your reply\n)[\s\S]*?(?=^## )/m, `$1${text.trim()}\n\n`));
+  const src = readFileSync(p, 'utf8');
+  // Replacement is a FUNCTION so "$" sequences in the reply text ($1, $&, …)
+  // are written literally instead of being expanded as group references, and
+  // the zone terminator is "## Log" so replies may contain markdown headings.
+  const re = /(^## Your reply\n)[\s\S]*?(?=^## Log$)/m;
+  if (!re.test(src)) throw new Error(`no reply zone in ${basename(p)}`);
+  writeFileSync(p, src.replace(re, (_m, g1) => `${g1}${text.trim()}\n\n`));
 }
 
 // ---------- html ----------
@@ -192,11 +201,29 @@ function cardHtml(c) {
 </div>`;
 }
 
+// Done column: collapsed cards (issue # + title only); cards done >48h ago
+// are hidden entirely (their canonical state lives in Linear; projection
+// pruning removes the files later — this is just the view-side cutoff).
+const DONE_HIDE_MS = 48 * 3.6e6;
+const doneAge = (c) => Date.now() - Date.parse(c.updated);
+function doneCardHtml(c) {
+  return `<div class="card done-mini" draggable="true" data-file="${esc(c.file)}">
+  <a href="${esc(c.url)}" target="_blank">${esc(c.issue)}</a><span class="mini-title" title="${esc(c.title)}">${esc(c.title)}</span>
+</div>`;
+}
 function boardHtml() {
   const all = cards();
   return COLUMNS.map((col) => {
-    const items = all.filter((c) => c.column === col);
-    return `<div class="col" data-column="${col}"><h2>${col}<span>${items.length}</span></h2><div class="cards">${items.map(cardHtml).join('')}</div></div>`;
+    let items = all.filter((c) => c.column === col);
+    let older = 0;
+    if (col === 'done') {
+      const vis = items.filter((c) => !(isFinite(doneAge(c)) && doneAge(c) > DONE_HIDE_MS));
+      older = items.length - vis.length;
+      items = vis;
+    }
+    const render = col === 'done' ? doneCardHtml : cardHtml;
+    const count = `${items.length}${older ? ` · ${older} older hidden` : ''}`;
+    return `<div class="col" data-column="${col}"><h2>${col}<span>${count}</span></h2><div class="cards">${items.map(render).join('')}</div></div>`;
   }).join('');
 }
 
@@ -232,6 +259,8 @@ function pageHtml() {
   .glyph{font-size:12px}
   .chip{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:1px 7px;border-radius:8px;border:1px solid var(--border);color:var(--accent);text-decoration:none;max-width:150px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
   .chip:hover{border-color:var(--accent)}
+  .card.done-mini{width:auto;max-width:236px;display:flex;gap:6px;align-items:baseline;padding:4px 9px}
+  .done-mini .mini-title{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .card.prio-urgent{border-left:3px solid var(--err)}
   .card.prio-high{border-left:3px solid var(--warn)}
   .card.prio-medium{border-left:3px solid var(--accent)}
@@ -261,7 +290,7 @@ function pageHtml() {
 <div id="console">
   <iframe id="term" src="/term/"></iframe>
   <div class="hint" id="termhint" style="display:none">terminal blank? <code>plugins/marsh/scripts/marsh-up.sh</code> brings up tmux+claude+ttyd+serve</div>
-  <div id="dropzone">drop to type context into the session</div>
+  <div id="dropzone">drop card → type context · drop file/photo → upload + type its path</div>
 </div>
 </div>
 <div id="toast"></div>
@@ -309,16 +338,34 @@ function pageHtml() {
     const r=await post('/up',{});toast(r.ok?'stack up — reloading terminal':'bring-up failed');
     if(r.ok)setTimeout(()=>{document.getElementById('term').src='/term/'},1500);
   });
-  // drop-to-terminal: any card drag activates the console dropzone
+  // drop-to-terminal: card drags AND OS file drags (photos etc.) activate the
+  // console dropzone. Files upload to var/uploads/ and their absolute path is
+  // typed into the session — Claude Code reads images from paths.
   const zone=document.getElementById('dropzone'), consoleEl=document.getElementById('console');
+  const hasFiles=e=>!!e.dataTransfer&&Array.from(e.dataTransfer.types||[]).includes('Files');
   document.addEventListener('dragover',e=>{
-    if(!dragging)return;
+    if(hasFiles(e))e.preventDefault();          // stop the browser navigating to a dropped file
+    else if(!dragging)return;
     const r=consoleEl.getBoundingClientRect();
     zone.classList.toggle('active',e.clientX>r.left);
   });
+  document.addEventListener('drop',e=>{if(hasFiles(e))e.preventDefault();zone.classList.remove('active')});
+  document.addEventListener('dragleave',e=>{if(!e.relatedTarget)zone.classList.remove('active')});
   zone.addEventListener('dragover',e=>e.preventDefault());
   zone.addEventListener('drop',async e=>{
     e.preventDefault();zone.classList.remove('active');dragging=false;
+    if(e.dataTransfer.files&&e.dataTransfer.files.length){
+      for(const file of e.dataTransfer.files){
+        if(file.size>25e6){toast(file.name+' too large (25MB max)');continue}
+        const r=await fetch('/upload?name='+encodeURIComponent(file.name),{method:'POST',body:file});
+        const j=await r.json().catch(()=>null);
+        if(j&&j.ok){const s=await post('/send',{text:j.path+' '});
+          if(s.ok)toast(file.name+' → path typed into session (add prompt, then Enter)');
+          else{await navigator.clipboard.writeText(j.path);toast('saved '+j.path+' — tmux not reachable, path copied')}}
+        else toast('upload failed: '+file.name);
+      }
+      return;
+    }
     const f=e.dataTransfer.getData('text');if(!f)return;
     const c=await (await fetch('/card?file='+encodeURIComponent(f))).json();
     const block='[Context '+c.issue+' — "'+c.title+'" | '+c.column+(c.gate&&c.gate!=='null'?'/'+c.gate:'')+(c.pr&&c.pr!=='null'?' | PR '+c.pr:'')+' | '+c.url+'] ';
@@ -421,6 +468,24 @@ const server = createServer(async (req, res) => {
       // Self-heal from the PWA window: bring up tmux/claude/ttyd (idempotent).
       execFile('sh', [join(import.meta.dirname, 'marsh-up.sh')], { env: { ...process.env, MARSH_NO_OPEN: '1' } }, (err, stdout) => {
         res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: !err, log: String(stdout).slice(-400) }));
+      });
+    } else if (url.pathname === '/upload' && req.method === 'POST') {
+      // Raw file body → var/uploads/<ts>-<name>; responds with the absolute
+      // path (the UI then types it into the tmux session for Claude to read).
+      // No spaces in the saved name: the path is typed into the terminal
+      // unquoted, so it must be shell/prompt-safe as a single token.
+      const name = basename(url.searchParams.get('name') || 'file').replace(/[^\w.@-]/g, '_') || 'file';
+      const chunks = [];
+      let size = 0;
+      req.on('data', (c) => { size += c.length; if (size <= 25e6) chunks.push(c); });
+      req.on('end', () => {
+        if (size > 25e6) { res.writeHead(413).end('file too large (25MB max)'); return; }
+        if (!size) { res.writeHead(400).end('empty upload'); return; }
+        const dir = resolve('var/uploads');
+        mkdirSync(dir, { recursive: true });
+        const p = join(dir, `${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}-${name}`);
+        writeFileSync(p, Buffer.concat(chunks));
+        res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: true, path: p }));
       });
     } else if (url.pathname === '/send' && req.method === 'POST') {
       const { text } = await body(req);
