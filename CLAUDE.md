@@ -8,6 +8,11 @@ instance bindings in `config/`. Durable state lives in Linear (ledger),
 Note: this hub repo is **local-only (no git remote)** — "hub main" means the
 local main checkout; `git fetch origin` here fails by design, skip it.
 
+**Worktree sessions**: `config/` edits are only valid on hub main — your
+worktree copy is diverged and isolation blocks the hub path. Don't route
+around it: surface the exact edit (digest / escalation / card) for the
+hub-side session or the operator to apply.
+
 ## Token discipline
 
 - Prefer **checkpoint-and-restart over compaction**: durable state is designed
