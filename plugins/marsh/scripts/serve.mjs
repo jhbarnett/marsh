@@ -301,7 +301,8 @@ function pageHtml() {
   let dragging=false;
   function wireBoard(){
     document.querySelectorAll('.card').forEach(c=>{
-      c.addEventListener('dragstart',e=>{dragging=true;e.dataTransfer.setData('text',c.dataset.file)});
+      c.addEventListener('dragstart',e=>{dragging=true;e.dataTransfer.setData('text',c.dataset.file);
+        document.getElementById('dropzone').classList.add('active')});
       c.addEventListener('dragend',()=>{dragging=false;document.getElementById('dropzone').classList.remove('active')});
     });
     document.querySelectorAll('.col').forEach(col=>{
@@ -341,13 +342,20 @@ function pageHtml() {
   // drop-to-terminal: card drags AND OS file drags (photos etc.) activate the
   // console dropzone. Files upload to var/uploads/ and their absolute path is
   // typed into the session — Claude Code reads images from paths.
-  const zone=document.getElementById('dropzone'), consoleEl=document.getElementById('console');
+  const zone=document.getElementById('dropzone');
   const hasFiles=e=>!!e.dataTransfer&&Array.from(e.dataTransfer.types||[]).includes('Files');
+  // Arm the overlay as soon as a drag EXISTS — never on pointer position: drag
+  // events over the ttyd iframe go to the iframe's document, so the parent
+  // cannot see the pointer there. The armed overlay covers the iframe and
+  // catches the drop itself. OS file drags have no in-page dragend, so a
+  // heartbeat timeout disarms when their dragover events stop.
+  let fileTimer=null;
   document.addEventListener('dragover',e=>{
-    if(hasFiles(e))e.preventDefault();          // stop the browser navigating to a dropped file
-    else if(!dragging)return;
-    const r=consoleEl.getBoundingClientRect();
-    zone.classList.toggle('active',e.clientX>r.left);
+    if(!hasFiles(e))return;
+    e.preventDefault();                          // stop the browser opening a dropped file
+    zone.classList.add('active');
+    clearTimeout(fileTimer);
+    fileTimer=setTimeout(()=>{if(!dragging)zone.classList.remove('active')},400);
   });
   document.addEventListener('drop',e=>{if(hasFiles(e))e.preventDefault();zone.classList.remove('active')});
   document.addEventListener('dragleave',e=>{if(!e.relatedTarget)zone.classList.remove('active')});
