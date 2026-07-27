@@ -5,6 +5,9 @@ factory. Architecture in `DESIGN.md`, ledger protocol in `protocol.md`,
 instance bindings in `config/`. Durable state lives in Linear (ledger),
 `config/`, `reports/`, and git — the conversation is never the state.
 
+Note: this hub repo is **local-only (no git remote)** — "hub main" means the
+local main checkout; `git fetch origin` here fails by design, skip it.
+
 ## Token discipline
 
 - Prefer **checkpoint-and-restart over compaction**: durable state is designed
