@@ -27,8 +27,19 @@ if ! pgrep -f "ttyd.*-p $TTYD_PORT" >/dev/null 2>&1; then
   echo "started ttyd :$TTYD_PORT ($MODE theme)"
 fi
 
-# 4. the board
-if ! pgrep -f "serve.mjs" >/dev/null 2>&1; then
+# 4. the board — auto-bounce when serve.mjs is newer than the running server,
+# so "relaunch Marsh.app" is the universal update path
+SERVE_PID=$(pgrep -f "serve.mjs" 2>/dev/null | head -1)
+if [ -n "$SERVE_PID" ]; then
+  MTIME=$(stat -f %m "$SCRIPT_DIR/serve.mjs" 2>/dev/null || echo 0)
+  LSTART=$(ps -p "$SERVE_PID" -o lstart= 2>/dev/null)
+  START=$(date -j -f "%a %b %e %T %Y" "$LSTART" +%s 2>/dev/null || echo 0)
+  if [ "$START" -gt 0 ] && [ "$MTIME" -gt "$START" ]; then
+    kill "$SERVE_PID" 2>/dev/null; sleep 1; SERVE_PID=""
+    echo "serve.mjs changed since server start — bounced"
+  fi
+fi
+if [ -z "$SERVE_PID" ]; then
   nohup node "$SCRIPT_DIR/serve.mjs" --port "$SERVE_PORT" --tmux "$TMUXS" >> var/serve.log 2>&1 &
   echo "started marsh serve :$SERVE_PORT"
 fi
