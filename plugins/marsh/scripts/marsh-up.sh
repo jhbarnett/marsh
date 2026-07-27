@@ -34,5 +34,13 @@ if ! pgrep -f "serve.mjs" >/dev/null 2>&1; then
 fi
 
 sleep 1
-open "http://127.0.0.1:$SERVE_PORT" 2>/dev/null || true
+# Open as a chromeless app window when Chrome is available (dock-app feel);
+# MARSH_NO_OPEN=1 skips, MARSH_OPEN=tab forces a normal tab.
+if [ -n "${MARSH_NO_OPEN:-}" ]; then
+  :
+elif [ "${MARSH_OPEN:-app}" = "app" ] && [ -d "/Applications/Google Chrome.app" ]; then
+  open -na "Google Chrome" --args --app="http://127.0.0.1:$SERVE_PORT" 2>/dev/null || open "http://127.0.0.1:$SERVE_PORT"
+else
+  open "http://127.0.0.1:$SERVE_PORT" 2>/dev/null || true
+fi
 echo "cockpit → http://127.0.0.1:$SERVE_PORT"
