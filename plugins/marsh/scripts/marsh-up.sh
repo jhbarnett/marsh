@@ -23,7 +23,7 @@ fi
 if ! pgrep -f "ttyd.*-p $TTYD_PORT" >/dev/null 2>&1; then
   MODE=light; defaults read -g AppleInterfaceStyle 2>/dev/null | grep -q Dark && MODE=dark
   THEME=$(python3 "$SCRIPT_DIR/theme_sync.py" --ttyd "$MODE" 2>/dev/null || echo '{}')
-  nohup ttyd -W -p "$TTYD_PORT" -t "theme=$THEME" tmux attach -t "$TMUXS" >> var/ttyd.log 2>&1 &
+  nohup ttyd -W -p "$TTYD_PORT" -t "theme=$THEME" -t macOptionIsMeta=true tmux attach -t "$TMUXS" >> var/ttyd.log 2>&1 &
   echo "started ttyd :$TTYD_PORT ($MODE theme)"
 fi
 

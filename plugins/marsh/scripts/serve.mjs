@@ -6,7 +6,8 @@
 //   POST /send  types literal keystrokes into the tmux session (never Enter)
 // Theme comes from workbench/theme.json (theme_sync.py extracts it from the
 // operator's terminal config); dark/light variants follow system appearance.
-import { createServer } from 'node:http';
+import { createServer, request as httpRequest } from 'node:http';
+import { connect as netConnect } from 'node:net';
 import { readFileSync, writeFileSync, readdirSync, watch, existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { execFile } from 'node:child_process';
@@ -19,7 +20,51 @@ const flag = (name, dflt) => {
 const CARDS_DIR = flag('dir', 'workbench/cards');
 const PORT = Number(flag('port', 4643));
 const TERM_URL = flag('term', 'http://127.0.0.1:4644');
+const TERM_HOST = new URL(TERM_URL).hostname;
+const TERM_PORT = Number(new URL(TERM_URL).port || 80);
 const TMUX = flag('tmux', 'marsh');
+
+// Key shim injected into the proxied ttyd page (same-origin via /term/).
+// - Shift+Enter → bracketed-paste "\n": Claude Code inserts a newline
+//   instead of submitting (raw terminals cannot distinguish Shift+Enter).
+// - Cmd+Left/Right → Home/End sequences, with the browser default (history
+//   navigation!) suppressed.
+const KEY_SHIM = `<script>(function(){var tries=0,iv=setInterval(function(){var t=window.term;tries++;
+if(!t||!t.attachCustomKeyEventHandler){if(tries>60)clearInterval(iv);return;}
+clearInterval(iv);
+t.attachCustomKeyEventHandler(function(e){
+ if(e.type!=='keydown'||e.marshSynthetic)return true;
+ if(e.key==='Enter'&&e.shiftKey&&!e.metaKey&&!e.ctrlKey){t.paste('\\n');return false;}
+ var map={ArrowLeft:['Home',36],ArrowRight:['End',35]};
+ if(e.metaKey&&!e.altKey&&map[e.key]){e.preventDefault();
+  var m=map[e.key],ev=new KeyboardEvent('keydown',{key:m[0],code:m[0],keyCode:m[1],which:m[1],bubbles:true,cancelable:true});
+  ev.marshSynthetic=true;(t.textarea||document.activeElement).dispatchEvent(ev);return false;}
+ return true;});
+console.log('[marsh] key shim active');},250);})()</script>`;
+
+function proxyTerm(req, res, url) {
+  const path = url.pathname.replace(/^\/term\/?/, '/') + (url.search || '');
+  const up = httpRequest({ host: TERM_HOST, port: TERM_PORT, path, method: req.method, headers: { ...req.headers, host: `${TERM_HOST}:${TERM_PORT}` } }, (ur) => {
+    const isHtml = (ur.headers['content-type'] || '').includes('text/html');
+    if (!isHtml) {
+      res.writeHead(ur.statusCode, ur.headers);
+      ur.pipe(res);
+      return;
+    }
+    const chunks = [];
+    ur.on('data', (c) => chunks.push(c));
+    ur.on('end', () => {
+      let body = Buffer.concat(chunks).toString('utf8');
+      body = body.includes('</body>') ? body.replace('</body>', KEY_SHIM + '</body>') : body + KEY_SHIM;
+      const h = { ...ur.headers, 'content-length': Buffer.byteLength(body) };
+      delete h['content-encoding'];
+      res.writeHead(ur.statusCode, h);
+      res.end(body);
+    });
+  });
+  up.on('error', () => { res.writeHead(502).end('terminal upstream not running — marsh-up.sh starts it'); });
+  req.pipe(up);
+}
 const COLUMNS = ['inbox', 'ready', 'in-progress', 'awaiting-decision', 'in-review', 'done'];
 
 const esc = (s) =>
@@ -155,7 +200,7 @@ function boardHtml() {
 
 function pageHtml() {
   const th = loadTheme();
-  return `<!doctype html><meta charset="utf-8"><title>marsh</title><link rel="icon" type="image/svg+xml" href="/avatar.svg">
+  return `<!doctype html><meta charset="utf-8"><title>marsh</title><link rel="icon" type="image/svg+xml" href="/avatar.svg"><link rel="manifest" href="/manifest.json"><link rel="apple-touch-icon" href="/icon-512.png"><meta name="theme-color" content="${esc(th.dark.background)}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
   :root{${cssVars(th.dark)}}
   @media (prefers-color-scheme: light){:root{${cssVars(th.light)}}}
@@ -206,13 +251,13 @@ function pageHtml() {
   code{background:var(--panel);border:1px solid var(--border);padding:0 4px;border-radius:3px}
   .hint{font-size:10px;color:var(--dim);padding:3px 14px}
 </style>
-<header><h1>marsh</h1><span id="stamp"></span>
+<header><img src="/avatar.svg" alt="" style="width:22px;height:22px;border-radius:50%"><h1>marsh</h1><span id="stamp"></span>
   <div class="hbtns"><a id="term-pop" href="${esc(TERM_URL)}" target="_blank" title="open terminal in its own tab">↗</a></div></header>
 <div id="main">
 <div id="board"></div>
 <div id="splitter"></div>
 <div id="console">
-  <iframe id="term" src="${esc(TERM_URL)}"></iframe>
+  <iframe id="term" src="/term/"></iframe>
   <div class="hint" id="termhint" style="display:none">terminal blank? <code>plugins/marsh/scripts/marsh-up.sh</code> brings up tmux+claude+ttyd+serve</div>
   <div id="dropzone">drop to type context into the session</div>
 </div>
@@ -310,11 +355,25 @@ const body = (req) =>
     req.on('end', () => res(JSON.parse(d || '{}')));
   });
 
-createServer(async (req, res) => {
+const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   try {
     if (url.pathname === '/' && req.method === 'GET') {
       res.writeHead(200, { 'content-type': 'text/html' }).end(pageHtml());
+    } else if (url.pathname === '/manifest.json') {
+      const th = loadTheme();
+      res.writeHead(200, { 'content-type': 'application/manifest+json' }).end(JSON.stringify({
+        name: 'Marsh', short_name: 'Marsh', start_url: '/', display: 'standalone',
+        background_color: th.dark.background, theme_color: th.dark.background,
+        icons: [
+          { src: '/avatar.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        ],
+      }));
+    } else if (url.pathname === '/icon-512.png') {
+      const p = join(import.meta.dirname, '..', 'assets', 'marsh-avatar-512.png');
+      if (!existsSync(p)) { res.writeHead(404).end(); return; }
+      res.writeHead(200, { 'content-type': 'image/png' }).end(readFileSync(p));
     } else if (url.pathname === '/board') {
       res.writeHead(200, { 'content-type': 'text/html' }).end(boardHtml());
     } else if (url.pathname === '/meta') {
@@ -324,6 +383,8 @@ createServer(async (req, res) => {
     } else if (url.pathname === '/card') {
       const c = parseCard(safePath(url.searchParams.get('file')));
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(c));
+    } else if (url.pathname === '/term' || url.pathname.startsWith('/term/')) {
+      proxyTerm(req, res, url);
     } else if (url.pathname === '/avatar.svg') {
       const p = join(import.meta.dirname, '..', 'assets', 'marsh-avatar.svg');
       res.writeHead(200, { 'content-type': 'image/svg+xml' }).end(existsSync(p) ? readFileSync(p) : '');
@@ -360,6 +421,27 @@ createServer(async (req, res) => {
   } catch (e) {
     res.writeHead(400).end(String(e.message ?? e));
   }
-}).listen(PORT, '127.0.0.1', () =>
-  console.log(`marsh serve → http://127.0.0.1:${PORT}  (cards: ${CARDS_DIR}, tmux: ${TMUX})`)
+});
+
+// WebSocket relay for the proxied terminal (/term/ws → ttyd)
+server.on('upgrade', (req, socket, head) => {
+  if (!req.url.startsWith('/term')) { socket.destroy(); return; }
+  const path = req.url.replace(/^\/term\/?/, '/');
+  const up = netConnect(TERM_PORT, TERM_HOST, () => {
+    let raw = `GET ${path} HTTP/1.1\r\n`;
+    for (let i = 0; i < req.rawHeaders.length; i += 2) {
+      const k = req.rawHeaders[i];
+      raw += `${k}: ${k.toLowerCase() === 'host' ? `${TERM_HOST}:${TERM_PORT}` : req.rawHeaders[i + 1]}\r\n`;
+    }
+    up.write(raw + '\r\n');
+    if (head?.length) up.write(head);
+    socket.pipe(up);
+    up.pipe(socket);
+  });
+  up.on('error', () => socket.destroy());
+  socket.on('error', () => up.destroy());
+});
+
+server.listen(PORT, '127.0.0.1', () =>
+  console.log(`marsh serve → http://127.0.0.1:${PORT}  (cards: ${CARDS_DIR}, tmux: ${TMUX}, term proxy: /term/ → ${TERM_HOST}:${TERM_PORT})`)
 );
