@@ -44,7 +44,9 @@ console.log('[marsh] key shim active');},250);})()</script>`;
 
 function proxyTerm(req, res, url) {
   const path = url.pathname.replace(/^\/term\/?/, '/') + (url.search || '');
-  const up = httpRequest({ host: TERM_HOST, port: TERM_PORT, path, method: req.method, headers: { ...req.headers, host: `${TERM_HOST}:${TERM_PORT}` } }, (ur) => {
+  const headers = { ...req.headers, host: `${TERM_HOST}:${TERM_PORT}` };
+  delete headers['accept-encoding']; // force identity: we splice HTML, so upstream must not compress
+  const up = httpRequest({ host: TERM_HOST, port: TERM_PORT, path, method: req.method, headers }, (ur) => {
     const isHtml = (ur.headers['content-type'] || '').includes('text/html');
     if (!isHtml) {
       res.writeHead(ur.statusCode, ur.headers);
