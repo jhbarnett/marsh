@@ -11,7 +11,7 @@ never syncs.
 - Claude Code (latest) with the **Linear MCP** connected under *your* account —
   Marsh's Linear writes act as you, and `assignee: "me"` resolves to you.
 - `node` ≥ 20, `tmux`, `ttyd` (`brew install tmux ttyd`), `python3`, `gh` (authed).
-- Checkouts of the target repos (`fitrankings-core`, `fitrankings-apps`, …)
+- Checkouts of your target repos (as named in `config/registry.json`)
   under one workspace root, using the same directory names as the registry.
 
 ## Setup
