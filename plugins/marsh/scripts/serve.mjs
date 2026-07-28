@@ -427,8 +427,9 @@ setInterval(() => {
       execFile('git', ['rev-parse', 'HEAD'], { cwd: process.cwd() }, (e1, after) => {
         if (!e0 && !e1 && before.trim() !== after.trim()) {
           console.log(`pulled ${after.trim().slice(0, 7)} — refreshing plugin cache`);
-          execFile(claudeBin, ['plugin', 'update', 'marsh@marsh'], { cwd: process.cwd() }, (e) => {
-            if (e) execFile(claudeBin, ['plugin', 'install', 'marsh@marsh', '--force'], { cwd: process.cwd() }, () => {});
+          // version-gated 'update' no-ops on content-only changes; uninstall+install re-snapshots
+          execFile(claudeBin, ['plugin', 'uninstall', 'marsh@marsh'], { cwd: process.cwd() }, () => {
+            execFile(claudeBin, ['plugin', 'install', 'marsh@marsh'], { cwd: process.cwd() }, () => {});
           });
         }
       });

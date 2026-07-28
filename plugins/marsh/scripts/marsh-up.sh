@@ -14,7 +14,7 @@ CLAUDE="$(command -v claude || true)"; [ -n "$CLAUDE" ] || CLAUDE="$HOME/.local/
 
 # 0. current contracts: ff-only pull (never touches local work; skips on divergence)
 git pull --ff-only -q 2>/dev/null && echo "contracts current" || true
-"$CLAUDE" plugin update marsh@marsh >/dev/null 2>&1 || "$CLAUDE" plugin install marsh@marsh >/dev/null 2>&1 || true
+{ "$CLAUDE" plugin uninstall marsh@marsh >/dev/null 2>&1; "$CLAUDE" plugin install marsh@marsh >/dev/null 2>&1; } || true
 
 # 1. theme: extract from the operator's terminal config (best effort)
 python3 "$SCRIPT_DIR/theme_sync.py" >/dev/null 2>&1 || true
