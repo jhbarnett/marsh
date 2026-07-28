@@ -57,11 +57,11 @@ if [ -n "${MARSH_NO_OPEN:-}" ]; then
   :
 elif [ -n "$PWA" ]; then
   open -a "$PWA"   # installed PWA: own dock identity (heron), not Chrome's
-elif [ "${MARSH_OPEN:-app}" = "app" ] && [ -d "/Applications/Google Chrome.app" ]; then
-  open -na "Google Chrome" --args --app="http://127.0.0.1:$SERVE_PORT" 2>/dev/null || open "http://127.0.0.1:$SERVE_PORT"
-  osascript -e 'display notification "Window is Chrome-attributed — install the PWA for Marsh dock identity (⋮ → Install page as app)" with title "Marsh"' 2>/dev/null || true
-  echo "note: PWA not installed — this window shows as Chrome; install via ⋮ → Install page as app"
 else
+  # No PWA installed: open a NORMAL tab — a chromeless --app window has no
+  # address bar/menu, so the PWA could never be installed from it (catch-22).
   open "http://127.0.0.1:$SERVE_PORT" 2>/dev/null || true
+  osascript -e 'display notification "One-time: click the install icon in the address bar (Install Marsh) — then relaunch Marsh.app for its own dock identity" with title "Marsh"' 2>/dev/null || true
+  echo "note: PWA not installed — use the address-bar install icon in this tab, then relaunch"
 fi
 echo "cockpit → http://127.0.0.1:$SERVE_PORT"
