@@ -63,7 +63,8 @@ ok "hub pointer ~/.config/marsh/hub"
 # no shared secrets required: device flow uses the public client id only
 PLIST="$HOME/Library/LaunchAgents/com.marsh.serve.plist"
 mkdir -p "$HOME/Library/LaunchAgents"
-sed "s|__HUB__|$HUB|" scripts/com.marsh.serve.plist.template > "$PLIST"
+NODEDIR="$(dirname "$(command -v node)")"
+sed -e "s|__HUB__|$HUB|" -e "s|__NODEDIR__|$NODEDIR|" scripts/com.marsh.serve.plist.template > "$PLIST"
 pkill -f "serve.mjs" 2>/dev/null; sleep 1
 launchctl unload "$PLIST" 2>/dev/null; launchctl load "$PLIST"
 ok "board runs as launchd service (com.marsh.serve, always on)"

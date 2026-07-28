@@ -7,7 +7,7 @@
     <string>cd "__HUB__" &amp;&amp; exec node plugins/marsh/scripts/serve.mjs >> var/serve.log 2>&amp;1</string>
   </array>
   <key>EnvironmentVariables</key><dict>
-    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>PATH</key><string>__NODEDIR__:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
   </dict>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>

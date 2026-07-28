@@ -15,7 +15,11 @@ because serve triggers it on an interval and from the board's ↻ button.
    name+type, labels, priority, assignee, url, updatedAt):
    - every carded issue (they may have closed/moved out-of-band), and
    - active issues per team (triage-type + unstarted + started buckets,
-     limit ~50 each).
+     limit ~50 each), and
+   - **everything assigned to the operator** (`assignee: me`, any
+     non-terminal status including Backlog) — out-of-band assignments are
+     personally relevant regardless of status and must surface without
+     being called out.
 3. Build the snapshot (active ∪ carded — see `project_cards.py` docstring),
    write `var/board-snapshot.json`, run
    `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/project_cards.py" var/board-snapshot.json --prune-done-days 7`.
