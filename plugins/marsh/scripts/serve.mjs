@@ -419,10 +419,19 @@ if ((process.env.XPC_SERVICE_NAME ?? '').includes('com.marsh.serve')) {
 // ancestor of origin (uncommitted work and local commits are never touched;
 // divergence just skips). Code changes then self-restart us; contract
 // changes reach running sessions via the freshness hook.
+const claudeBin = existsSync(join(process.env.HOME ?? '', '.local/bin/claude'))
+  ? join(process.env.HOME, '.local/bin/claude') : 'claude';
 setInterval(() => {
-  execFile('git', ['pull', '--ff-only', '-q'], { cwd: process.cwd() }, (err, out) => {
-    if (!err) execFile('git', ['log', '-1', '--format=%h %s'], { cwd: process.cwd() }, (e2, head) => {
-      // log only meaningful updates (HEAD moved since boot is fine to note once)
+  execFile('git', ['rev-parse', 'HEAD'], { cwd: process.cwd() }, (e0, before) => {
+    execFile('git', ['pull', '--ff-only', '-q'], { cwd: process.cwd() }, () => {
+      execFile('git', ['rev-parse', 'HEAD'], { cwd: process.cwd() }, (e1, after) => {
+        if (!e0 && !e1 && before.trim() !== after.trim()) {
+          console.log(`pulled ${after.trim().slice(0, 7)} — refreshing plugin cache`);
+          execFile(claudeBin, ['plugin', 'update', 'marsh@marsh'], { cwd: process.cwd() }, (e) => {
+            if (e) execFile(claudeBin, ['plugin', 'install', 'marsh@marsh', '--force'], { cwd: process.cwd() }, () => {});
+          });
+        }
+      });
     });
   });
 }, 300_000);
