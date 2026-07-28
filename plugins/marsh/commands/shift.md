@@ -30,6 +30,10 @@ nothing; `--lanes` = restrict).
    cycle-first-then-backlog; `needs-*` labeled issues excluded; blocked
    issues excluded (relations); dev lane requires an approved plan AND
    committed status (Todo) — cycle commitment stays the human's authority.
+   **Multi-operator rule: an assignment is a claim.** Exclude issues
+   assigned to anyone other than this instance's operator (or unassigned) —
+   another teammate's assignment means their Marsh (or they) own it; the
+   takeover-elicitation path in protocol §5 is the only way across.
 5. **Dispatch within limits**: for each lane, up to `policy.lanes.<lane>.wip`
    minus in-flight: planning lane → `/marsh:plan` contract per
    ready-but-planless issue (plan-mia first); dev lane → `/marsh:build`

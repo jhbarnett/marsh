@@ -25,8 +25,15 @@ You are Marsh's status pass. Read-only everywhere. Run from the marsh hub repo.
    `interimGate` via `gateTracking`, each `knownFlakes[].tracking`,
    `knownEnvironmentalFailureClasses` via `gateTracking`), fetch the tracking
    issue's status. Tracking issue completed or canceled → the relaxation is
-   **STALE**: list it under "Needs you" with the exact registry edit that
-   restores the full gate. A relaxation must never outlive its cause.
+   **STALE-candidate**: list it under "Needs you" with the removal edit —
+   but retirement additionally requires **field quiet**: no matching
+   signature in any gate run since the closure (check recent
+   `station_passes` notes/build evidence). Closure without field quiet is
+   not retirement (learned 2026-07-27: the jest-expo relaxation was retired
+   on issue closure and the flake recurred 3x the same day — restored,
+   follow-up filed). Recurrence after retirement → restore the relaxation
+   and file a follow-up tracking issue. A relaxation must never outlive its
+   cause — but the field, not the tracker, decides when the cause is gone.
 5. **Local state**:
    - Parked tasks: `sqlite3 -json var/marsh.db "SELECT issue_id, lane, reason, wake_kind, parked_at FROM parked_tasks"`
    - Workbench: refresh the board — the snapshot MUST be **active ∪ carded**:

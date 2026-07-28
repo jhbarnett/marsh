@@ -59,7 +59,8 @@
     }
   },
   "defaults": {
-    "assignee": "jason",
+    "assignee": "me",
+    "assigneeNote": "'me' resolves to whichever operator's Linear auth is running this instance — never hardcode a person; per-operator overrides go in config/operator.json (gitignored)",
     "addActivatedIssuesToCurrentCycle": true
   },
   "humanOnlyWrites": [

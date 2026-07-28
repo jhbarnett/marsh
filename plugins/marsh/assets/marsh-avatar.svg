@@ -1,29 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <!-- Marsh: a heron wading in still water at dusk. Ghibli Forest palette. -->
+  <!-- Marsh: a pelican floating on still water at dusk. Ghibli Forest palette. -->
   <circle cx="64" cy="64" r="62" fill="#1A2420"/>
   <!-- moon -->
-  <circle cx="33" cy="30" r="12" fill="#E8DFD0" opacity="0.16"/>
+  <circle cx="33" cy="29" r="12" fill="#E8DFD0" opacity="0.16"/>
   <!-- water surface + far ripple -->
-  <path d="M14 95 q12 -4.5 24 0 t24 0 24 0 24 0" stroke="#6B9AC4" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.65"/>
-  <path d="M36 104 q10 -3.5 20 0 t20 0" stroke="#6B9AC4" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.3"/>
+  <path d="M12 90 q12 -4.5 24 0 t24 0 24 0 24 0" stroke="#6B9AC4" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.65"/>
+  <path d="M34 102 q10 -3.5 20 0 t20 0" stroke="#6B9AC4" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.3"/>
   <!-- reflection -->
-  <ellipse cx="58" cy="101" rx="15" ry="2.5" fill="#E8DFD0" opacity="0.1"/>
-  <!-- legs: front straight, back bent at the knee -->
-  <path d="M60 74 L58 99" stroke="#E8DFD0" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-  <path d="M66 74 L69 85 L67 99" stroke="#E8DFD0" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- tail feathers -->
-  <path d="M45 70 L36 79 L47 76 Z" fill="#E8DFD0"/>
-  <!-- body -->
-  <ellipse cx="57" cy="65" rx="17" ry="11" transform="rotate(-14 57 65)" fill="#E8DFD0"/>
+  <ellipse cx="60" cy="99" rx="20" ry="2.8" fill="#E8DFD0" opacity="0.1"/>
+  <!-- tail tip -->
+  <path d="M36 78 L28 71 L38 72 Z" fill="#E8DFD0"/>
+  <!-- body: floating on the waterline -->
+  <ellipse cx="56" cy="80" rx="23" ry="13" fill="#E8DFD0"/>
   <!-- folded-wing hint -->
-  <path d="M48 60 C56 66 66 68 70 64" stroke="#1A2420" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.12"/>
-  <!-- neck: heron S-curve -->
-  <path d="M64 61 C77 58 84 49 80 41 C77 35 74 34 76.5 29.5" stroke="#E8DFD0" stroke-width="6" fill="none" stroke-linecap="round"/>
-  <!-- head + crest plume -->
-  <circle cx="77" cy="28.5" r="5.8" fill="#E8DFD0"/>
-  <path d="M72.5 26 C68 22.5 64 22 61 24" stroke="#E8DFD0" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.85"/>
-  <!-- dagger beak -->
-  <path d="M81.5 25.8 L105 32.5 L81 31.8 Z" fill="#F4A460"/>
+  <path d="M42 76 C52 84 66 85 72 79" stroke="#1A2420" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.12"/>
+  <!-- neck: short and stout -->
+  <path d="M70 74 C78 70 80 60 78 52" stroke="#E8DFD0" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <!-- head with slight crest -->
+  <circle cx="77" cy="47" r="7.5" fill="#E8DFD0"/>
+  <path d="M71 43 C68 40 66 40 64 41.5" stroke="#E8DFD0" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/>
+  <!-- the pelican bill: long flat top, deep pouch beneath -->
+  <path d="M83 43 L113 52 L84 50 Z" fill="#F4A460"/>
+  <path d="M83 49 L111 53 Q97 68 82 53 Z" fill="#F4A460" opacity="0.88"/>
   <!-- eye -->
-  <circle cx="77.8" cy="27.6" r="1.6" fill="#1A2420"/>
+  <circle cx="78.5" cy="45" r="1.7" fill="#1A2420"/>
 </svg>

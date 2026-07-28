@@ -5,8 +5,10 @@ factory. Architecture in `DESIGN.md`, ledger protocol in `protocol.md`,
 instance bindings in `config/`. Durable state lives in Linear (ledger),
 `config/`, `reports/`, and git — the conversation is never the state.
 
-Note: this hub repo is **local-only (no git remote)** — "hub main" means the
-local main checkout; `git fetch origin` here fails by design, skip it.
+Note: this hub syncs with your instance's team remote
+(if configured — the public base has none). "Hub main" = local main; pull before a
+session if teammates may have pushed contract changes. Per-operator state
+(workbench cards, var/, config/operator.json) is gitignored and never shared.
 
 **Worktree sessions**: `config/` edits are only valid on hub main — your
 worktree copy is diverged and isolation blocks the hub path. Don't route
