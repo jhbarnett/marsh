@@ -38,11 +38,22 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </dict></plist>
 PLIST
 
-cat > "$APP/Contents/MacOS/marsh" <<LAUNCH
+cat > "$APP/Contents/MacOS/marsh" <<'LAUNCH'
 #!/bin/sh
-# Marsh cockpit launcher — hub path baked at package time.
-export PATH="/opt/homebrew/bin:/usr/local/bin:\$PATH"
-export MARSH_HUB="$HUB"
+# Marsh cockpit launcher — hub resolved at RUNTIME so the same .app/.dmg
+# works for every operator (install.sh writes ~/.config/marsh/hub).
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+HUB="${MARSH_HUB:-}"
+[ -z "$HUB" ] && HUB="$(cat "$HOME/.config/marsh/hub" 2>/dev/null)"
+if [ -z "$HUB" ] || [ ! -f "$HUB/plugins/marsh/scripts/marsh-up.sh" ]; then
+  for c in "$HOME/Code/marsh-agent" "$HOME/Code/local-marsh" "$HOME/code/marsh-agent" "$HOME/dev/marsh-agent" "$HOME/src/marsh-agent"; do
+    [ -f "$c/plugins/marsh/scripts/marsh-up.sh" ] && HUB="$c" && break
+  done
+fi
+if [ -z "$HUB" ]; then
+  osascript -e 'display alert "Marsh hub not found" message "Clone your Marsh instance repo and run ./install.sh"'
+  exit 1
+fi
 exec "$HUB/plugins/marsh/scripts/marsh-up.sh"
 LAUNCH
 chmod +x "$APP/Contents/MacOS/marsh"

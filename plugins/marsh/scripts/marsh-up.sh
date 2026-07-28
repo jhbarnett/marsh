@@ -39,7 +39,9 @@ if [ -n "$SERVE_PID" ]; then
     echo "serve.mjs changed since server start — bounced"
   fi
 fi
-if [ -z "$SERVE_PID" ]; then
+if launchctl list com.marsh.serve >/dev/null 2>&1; then
+  : # launchd owns serve (KeepAlive revives it after a bounce) — never double-start
+elif [ -z "$SERVE_PID" ]; then
   nohup node "$SCRIPT_DIR/serve.mjs" --port "$SERVE_PORT" --tmux "$TMUXS" >> var/serve.log 2>&1 &
   echo "started marsh serve :$SERVE_PORT"
 fi
