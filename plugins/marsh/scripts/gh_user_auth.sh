@@ -46,8 +46,8 @@ while True:
              device_code=d["device_code"], grant_type="urn:ietf:params:oauth:grant-type:device_code")
     if "access_token" in r: break
     if r.get("error") not in ("authorization_pending", "slow_down"): raise SystemExit(f"auth failed: {r}")
-out = {"access_token": r["access_token"], "refresh_token": r.get("refresh_token"),
-       "expires_at": time.time() + int(r.get("expires_in", 28800))}
+exp = time.time() + int(r["expires_in"]) if r.get("expires_in") else 9e12  # non-expiring app setting => never refresh
+out = {"access_token": r["access_token"], "refresh_token": r.get("refresh_token"), "expires_at": exp}
 json.dump(out, open(store, "w"))
 print("  authorized — Marsh now acts as you on GitHub (token auto-refreshes)")
 EOF
