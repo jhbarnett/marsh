@@ -10,6 +10,9 @@ TTYD_PORT="${MARSH_TTYD_PORT:-4644}"
 cd "$HUB" || exit 1
 mkdir -p var
 
+# 0. current contracts: ff-only pull (never touches local work; skips on divergence)
+git pull --ff-only -q 2>/dev/null && echo "contracts current" || true
+
 # 1. theme: extract from the operator's terminal config (best effort)
 python3 "$SCRIPT_DIR/theme_sync.py" >/dev/null 2>&1 || true
 

@@ -415,6 +415,18 @@ if ((process.env.XPC_SERVICE_NAME ?? '').includes('com.marsh.serve')) {
   });
 }
 
+// Auto-pull: ff-only every 5 min — succeeds only when local is a clean
+// ancestor of origin (uncommitted work and local commits are never touched;
+// divergence just skips). Code changes then self-restart us; contract
+// changes reach running sessions via the freshness hook.
+setInterval(() => {
+  execFile('git', ['pull', '--ff-only', '-q'], { cwd: process.cwd() }, (err, out) => {
+    if (!err) execFile('git', ['log', '-1', '--format=%h %s'], { cwd: process.cwd() }, (e2, head) => {
+      // log only meaningful updates (HEAD moved since boot is fine to note once)
+    });
+  });
+}, 300_000);
+
 let debounce;
 if (existsSync(CARDS_DIR))
   watch(CARDS_DIR, () => {
