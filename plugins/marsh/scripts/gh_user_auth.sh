@@ -39,7 +39,7 @@ def post(url, **kw):
     body = urllib.parse.urlencode(kw).encode()
     return json.load(urllib.request.urlopen(urllib.request.Request(url, body, {"Accept": "application/json"})))
 d = post("https://github.com/login/device/code", client_id=client_id)
-print(f"\n  Authorize Marsh as YOU:\n  open {d['verification_uri']}  and enter code:  {d['user_code']}\n")
+print(f"\n  Authorize Marsh as YOU:\n  open {d['verification_uri']}  and enter code:  {d['user_code']}\n", flush=True)
 while True:
     time.sleep(d.get("interval", 5) + 1)
     r = post("https://github.com/login/oauth/access_token", client_id=client_id,
