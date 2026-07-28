@@ -84,6 +84,14 @@ DONE_WITH_CONCERNS.
    After the PR attaches, Linear's Git automation may race your status
    write — re-fetch the issue and re-save if reverted
    (taxonomy `linearQuirks.gitAutomationRace`).
+   **GitHub authorship (user-OAuth)**: when
+   `~/.config/marsh/github-user-token.json` exists, ship with
+   `TOKEN=$(sh "${CLAUDE_PLUGIN_ROOT}/scripts/gh_user_auth.sh" --token)` —
+   push via `https://x-access-token:$TOKEN@github.com/<org>/<repo>` and
+   `GH_TOKEN=$TOKEN gh pr create …`. The token is the operator's own access
+   intersected with the app's narrow permissions (contents+PRs) — Marsh never
+   exceeds its human. No token file → plain operator `gh` auth. Mint per
+   ship; never store tokens in the repo or logs.
 2. Status → In Review; post `marsh:verification` comment (v2) with the gate
    evidence, panel counts, and PR URL in refs.
 3. **Project the card**: write the issue snapshot to `var/` and run
