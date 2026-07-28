@@ -1,85 +1,143 @@
 {
-  "lanes": {
-    "dev": { "substrate": "worktree", "wip": 3, "wipMax": 5 },
-    "planning": { "substrate": "none", "wip": 4 },
-    "discovery": { "substrate": "none", "wip": 2 },
-    "gardening": { "substrate": "none", "wip": 1 }
+ "lanes": {
+  "dev": {
+   "substrate": "worktree",
+   "wip": 3,
+   "wipMax": 5
   },
-  "gates": {
-    "default": { "planApproval": "human", "prReview": "human" },
-    "byShape": {
-      "layup": { "planApproval": "adversarial", "prReview": "human" },
-      "docs": { "planApproval": "adversarial", "prReview": "human" },
-      "spike": { "planApproval": "adversarial", "prReview": "none", "output": "document" },
-      "epic": { "action": "decompose", "maxDepth": 1 }
-    },
-    "byRiskClass": {
-      "security": { "planApproval": "human", "prReview": "human", "extraVerifiers": ["security-analyst"] },
-      "infra": { "planApproval": "human", "prReview": "human" }
-    }
+  "planning": {
+   "substrate": "none",
+   "wip": 4
   },
-  "riskClasses": {
-    "alwaysHuman": ["security", "auth", "migrations", "infra", "billing", "tenant-scoping"],
-    "protectedPaths": [
-      "**/migrations/**",
-      "**/auth/**",
-      "**/settings/**",
-      "compose/**",
-      ".github/workflows/**"
-    ],
-    "selfProtectedPaths": [
-      "config/**",
-      "plugins/marsh/hooks/**",
-      "protocol.md"
-    ]
+  "discovery": {
+   "substrate": "none",
+   "wip": 2
   },
-  "escalation": {
-    "maxAttemptsPerStation": 2,
-    "ladder": ["enrich-context", "change-approach", "decompose", "human"],
-    "deviationRule": "any deviation from the approved plan on alwaysHuman-class work returns to the human before it lands in a commit or draft PR — never silently"
-  },
-  "stationConduct": {
-    "pollForeground": "never stop the turn to wait on long-running commands (CI, test suites, builds): poll in the foreground with bounded sleeps/checks until the result arrives or the timeout escalates",
-    "contextStewardship": "route long outputs to files and reference paths; a pass approaching heavy context finishes its current unit, writes the handoff, and exits for a fresh wake — station passes never depend on compaction",
-    "reFetchDontSummarize": "file reads are re-fetchable — never carry a summarized file forward as if it were the file; re-read on demand (compaction loses specifics: measured 0/3 survival)",
-    "toolFriction": "when a tool fights you (wrong result shape, extra round-trips, workaround needed), append a one-line friction note to your station_passes row — weakness mining clusters these into runbook/config proposals",
-    "captureDiscoveries": "a non-obvious operational discovery (deploy topology, service quirk, decoy config, env behavior) must be captured as a runbook (/marsh:capture) before the session ends — chat and throwaway scripts are not storage",
-    "flakeRetries": 2,
-    "flakeRule": "a test failing intermittently across 2 reruns is a flake candidate: file/annotate an issue with the evidence; excluding it from the gate requires human approval, never a silent skip"
-  },
-  "budgets": {
-    "perShiftTokens": 2000000,
-    "perIssueTokens": 500000,
-    "modelTiers": {
-      "triage": "sonnet",
-      "extract": "sonnet",
-      "build": "inherit",
-      "judge": "inherit",
-      "verify": "inherit"
-    }
-  },
-  "defaults": {
-    "assignee": "me",
-    "assigneeNote": "'me' resolves to whichever operator's Linear auth is running this instance — never hardcode a person; per-operator overrides go in config/operator.json (gitignored)",
-    "addActivatedIssuesToCurrentCycle": true
-  },
-  "humanOnlyWrites": [
-    "cancel-issue",
-    "reassign-away-from-human",
-    "label-creation",
-    "anything-permission-classifier-blocks"
-  ],
-  "witness": {
-    "stuckThresholdHours": {
-      "started": 24,
-      "inReview": 72,
-      "elicitation": 48,
-      "parked": 96
-    },
-    "action": "escalate"
-  },
-  "merge": {
-    "authority": "human",
-    "refinery": { "strategy": "rebase-sequential", "conflictAction": "route-to-owner" }
+  "gardening": {
+   "substrate": "none",
+   "wip": 1
   }
+ },
+ "gates": {
+  "default": {
+   "planApproval": "human",
+   "prReview": "human"
+  },
+  "byShape": {
+   "layup": {
+    "planApproval": "adversarial",
+    "prReview": "human"
+   },
+   "docs": {
+    "planApproval": "adversarial",
+    "prReview": "human"
+   },
+   "spike": {
+    "planApproval": "adversarial",
+    "prReview": "none",
+    "output": "document"
+   },
+   "epic": {
+    "action": "decompose",
+    "maxDepth": 1
+   }
+  },
+  "byRiskClass": {
+   "security": {
+    "planApproval": "human",
+    "prReview": "human",
+    "extraVerifiers": [
+     "security-analyst"
+    ]
+   },
+   "infra": {
+    "planApproval": "human",
+    "prReview": "human"
+   }
+  }
+ },
+ "riskClasses": {
+  "alwaysHuman": [
+   "security",
+   "auth",
+   "migrations",
+   "infra",
+   "billing",
+   "tenant-scoping"
+  ],
+  "protectedPaths": [
+   "**/migrations/**",
+   "**/auth/**",
+   "**/settings/**",
+   "compose/**",
+   ".github/workflows/**"
+  ],
+  "selfProtectedPaths": [
+   "config/**",
+   "plugins/marsh/hooks/**",
+   "protocol.md"
+  ]
+ },
+ "escalation": {
+  "maxAttemptsPerStation": 2,
+  "ladder": [
+   "enrich-context",
+   "change-approach",
+   "decompose",
+   "human"
+  ],
+  "deviationRule": "any deviation from the approved plan on alwaysHuman-class work returns to the human before it lands in a commit or draft PR \u2014 never silently"
+ },
+ "stationConduct": {
+  "pollForeground": "never stop the turn to wait on long-running commands (CI, test suites, builds): poll in the foreground with bounded sleeps/checks until the result arrives or the timeout escalates",
+  "contextStewardship": "route long outputs to files and reference paths; a pass approaching heavy context finishes its current unit, writes the handoff, and exits for a fresh wake \u2014 station passes never depend on compaction",
+  "reFetchDontSummarize": "file reads are re-fetchable \u2014 never carry a summarized file forward as if it were the file; re-read on demand (compaction loses specifics: measured 0/3 survival)",
+  "toolFriction": "when a tool fights you (wrong result shape, extra round-trips, workaround needed), append a one-line friction note to your station_passes row \u2014 weakness mining clusters these into runbook/config proposals",
+  "captureDiscoveries": "a non-obvious operational discovery (deploy topology, service quirk, decoy config, env behavior) must be captured as a runbook (/marsh:capture) before the session ends \u2014 chat and throwaway scripts are not storage",
+  "flakeRetries": 2,
+  "flakeRule": "a test failing intermittently across 2 reruns is a flake candidate: file/annotate an issue with the evidence; excluding it from the gate requires human approval, never a silent skip"
+ },
+ "budgets": {
+  "perShiftTokens": 2000000,
+  "perIssueTokens": 500000,
+  "modelTiers": {
+   "triage": "sonnet",
+   "extract": "sonnet",
+   "build": "inherit",
+   "judge": "inherit",
+   "verify": "inherit"
+  }
+ },
+ "defaults": {
+  "assignee": "me",
+  "assigneeNote": "'me' resolves to whichever operator's Linear auth is running this instance \u2014 never hardcode a person; per-operator overrides go in config/operator.json (gitignored)",
+  "addActivatedIssuesToCurrentCycle": true
+ },
+ "humanOnlyWrites": [
+  "cancel-issue",
+  "reassign-away-from-human",
+  "label-creation",
+  "anything-permission-classifier-blocks"
+ ],
+ "witness": {
+  "stuckThresholdHours": {
+   "started": 24,
+   "inReview": 72,
+   "elicitation": 48,
+   "parked": 96
+  },
+  "action": "escalate"
+ },
+ "merge": {
+  "authority": "human",
+  "refinery": {
+   "strategy": "rebase-sequential",
+   "conflictAction": "route-to-owner"
+  }
+ },
+ "selfImprovement": {
+  "amendmentGate": "no prompt/contract amendment ships without a before/after eval diff in the PR body (eval_station.py on the affected station); regressions do not ship",
+  "shippingPath": "branch + PR to the instance repo \u2014 mining never pushes direct; anchors (riskClasses, hooks, panel-unconditional) may only be strengthened",
+  "panelPrecision": "mine station computes confirmed-vs-dismissed ratio of panel findings from PR review outcomes each run"
+ }
 }

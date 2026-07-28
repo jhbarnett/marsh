@@ -25,6 +25,17 @@ const TERM_HOST = new URL(TERM_URL).hostname;
 const TERM_PORT = Number(new URL(TERM_URL).port || 80);
 const TMUX = flag('tmux', 'marsh');
 const WORK_TOKEN = randomBytes(16).toString('hex'); // per-boot CSRF token for /work dispatch
+const REFRESH_MIN = Number(flag('refresh-min', 20));
+let refreshing = false;
+function boardRefresh(cb) {
+  if (refreshing) { cb?.('already running'); return; }
+  refreshing = true;
+  const claudeBin = existsSync(join(process.env.HOME ?? '', '.local/bin/claude'))
+    ? join(process.env.HOME, '.local/bin/claude') : 'claude';
+  execFile(claudeBin, ['-p', '/marsh:refresh', '--model', 'haiku'], { cwd: process.cwd(), timeout: 240_000 },
+    (err, out) => { refreshing = false; const line = (out ?? '').trim().split('\n').pop() ?? ''; console.log(`refresh: ${err ? 'failed' : line}`); cb?.(err ? 'failed' : line); });
+}
+if (REFRESH_MIN > 0) setInterval(() => boardRefresh(), REFRESH_MIN * 60_000);
 
 // Key shim injected into the proxied ttyd page (same-origin via /term/).
 // - Shift+Enter → bracketed-paste "\n": Claude Code inserts a newline
@@ -285,7 +296,7 @@ function pageHtml() {
   .hint{font-size:10px;color:var(--dim);padding:3px 14px}
 </style>
 <header><img src="/avatar.svg?v=3" alt="" style="width:22px;height:22px;border-radius:50%"><h1>marsh</h1><span id="stamp"></span>
-  <div class="hbtns"><button id="up" class="view" title="bring up tmux/claude/ttyd (idempotent)">▲ up</button><a id="term-pop" href="${esc(TERM_URL)}" target="_blank" title="open terminal in its own tab">↗</a></div></header>
+  <div class="hbtns"><button id="refresh" class="view" title="reconcile cards with Linear now">↻ sync</button><button id="up" class="view" title="bring up tmux/claude/ttyd (idempotent)">▲ up</button><a id="term-pop" href="${esc(TERM_URL)}" target="_blank" title="open terminal in its own tab">↗</a></div></header>
 <div id="main">
 <div id="board"></div>
 <div id="splitter"></div>
@@ -337,6 +348,10 @@ function pageHtml() {
   }
   const es=new EventSource('/events');
   es.addEventListener('change',refreshBoard);
+  document.getElementById('refresh').addEventListener('click',async()=>{
+    const b=document.getElementById('refresh');b.textContent='↻ …';
+    const r=await post('/refresh',{});toast(r.line||'refresh failed');b.textContent='↻ sync';refreshBoard();
+  });
   document.getElementById('up').addEventListener('click',async()=>{
     const r=await post('/up',{});toast(r.ok?'stack up — reloading terminal':'bring-up failed');
     if(r.ok)setTimeout(()=>{document.getElementById('term').src='/term/'},1500);
@@ -531,6 +546,8 @@ button{background:var(--ok);color:var(--bg);border:0;border-radius:6px;padding:1
         execFile(claudeBin, ['--bg', '--name', `marsh-${id}`, routed], { cwd: process.cwd() }, () => {});
         res.writeHead(200, { 'content-type': 'text/html' }).end(`<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="2;url=/"><body style="font:14px -apple-system,sans-serif;background:#1A2420;color:#E8DFD0;display:grid;place-items:center;height:100vh"><div>dispatched <b>marsh-${esc(id)}</b> — returning to the board…</div>`);
       });
+    } else if (url.pathname === '/refresh' && req.method === 'POST') {
+      boardRefresh((line) => res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: line !== 'failed', line })));
     } else if (url.pathname === '/up' && req.method === 'POST') {
       // Self-heal from the PWA window: bring up tmux/claude/ttyd (idempotent).
       execFile('sh', [join(import.meta.dirname, 'marsh-up.sh')], { env: { ...process.env, MARSH_NO_OPEN: '1' } }, (err, stdout) => {

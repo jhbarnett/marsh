@@ -15,6 +15,12 @@ worktree copy is diverged and isolation blocks the hub path. Don't route
 around it: surface the exact edit (digest / escalation / card) for the
 hub-side session or the operator to apply.
 
+## Self-improvement discipline
+
+Harness amendments ship as PRs with eval diffs (`policy.selfImprovement`) —
+never direct pushes, never gate-weakening. `/marsh:mine` is the station;
+manual mining follows the same rules.
+
 ## Token discipline
 
 - Prefer **checkpoint-and-restart over compaction**: durable state is designed

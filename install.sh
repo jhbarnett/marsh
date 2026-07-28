@@ -14,7 +14,7 @@ echo "Marsh install — $HUB"
 # 1. prerequisites
 command -v brew >/dev/null 2>&1 || { fail "Homebrew required: https://brew.sh"; exit 1; }
 for f in tmux ttyd gh; do
-  command -v "$f" >/dev/null 2>&1 || { echo "  installing $f…"; brew install -q "$f"; }
+  command -v "$f" >/dev/null 2>&1 || { echo "  installing ${f}…"; brew install -q "$f"; }
   ok "$f"
 done
 command -v node >/dev/null 2>&1 && node -e 'process.exit(+process.versions.node.split(".")[0]>=20?0:1)' \
