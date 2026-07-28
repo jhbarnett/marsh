@@ -16,9 +16,8 @@
   <path d="M42 76 C52 84 66 85 72 79" stroke="#1A2420" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.12"/>
   <!-- neck: short and stout -->
   <path d="M70 74 C78 70 80 60 78 52" stroke="#E8DFD0" stroke-width="8" fill="none" stroke-linecap="round"/>
-  <!-- head with slight crest -->
+  <!-- head -->
   <circle cx="77" cy="47" r="7.5" fill="#E8DFD0"/>
-  <path d="M71 43 C68 40 66 40 64 41.5" stroke="#E8DFD0" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/>
   <!-- the pelican bill: long flat top, deep pouch beneath -->
   <path d="M83 43 L113 52 L84 50 Z" fill="#F4A460"/>
   <path d="M83 49 L111 53 Q97 68 82 53 Z" fill="#F4A460" opacity="0.88"/>

@@ -229,7 +229,7 @@ function boardHtml() {
 
 function pageHtml() {
   const th = loadTheme();
-  return `<!doctype html><meta charset="utf-8"><title>marsh</title><link rel="icon" type="image/svg+xml" href="/avatar.svg"><link rel="manifest" href="/manifest.json"><link rel="apple-touch-icon" href="/icon-512.png"><meta name="theme-color" content="${esc(th.dark.background)}"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><meta charset="utf-8"><title>marsh</title><link rel="icon" type="image/svg+xml" href="/avatar.svg?v=3"><link rel="manifest" href="/manifest.json"><link rel="apple-touch-icon" href="/icon-512.png"><meta name="theme-color" content="${esc(th.dark.background)}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
   :root{${cssVars(th.dark)}}
   @media (prefers-color-scheme: light){:root{${cssVars(th.light)}}}
@@ -282,7 +282,7 @@ function pageHtml() {
   code{background:var(--panel);border:1px solid var(--border);padding:0 4px;border-radius:3px}
   .hint{font-size:10px;color:var(--dim);padding:3px 14px}
 </style>
-<header><img src="/avatar.svg" alt="" style="width:22px;height:22px;border-radius:50%"><h1>marsh</h1><span id="stamp"></span>
+<header><img src="/avatar.svg?v=3" alt="" style="width:22px;height:22px;border-radius:50%"><h1>marsh</h1><span id="stamp"></span>
   <div class="hbtns"><button id="up" class="view" title="bring up tmux/claude/ttyd (idempotent)">▲ up</button><a id="term-pop" href="${esc(TERM_URL)}" target="_blank" title="open terminal in its own tab">↗</a></div></header>
 <div id="main">
 <div id="board"></div>
@@ -434,7 +434,7 @@ const server = createServer(async (req, res) => {
     } else if (url.pathname === '/icon-512.png') {
       const p = join(import.meta.dirname, '..', 'assets', 'marsh-avatar-512.png');
       if (!existsSync(p)) { res.writeHead(404).end(); return; }
-      res.writeHead(200, { 'content-type': 'image/png' }).end(readFileSync(p));
+      res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-cache' }).end(readFileSync(p));
     } else if (url.pathname === '/board') {
       res.writeHead(200, { 'content-type': 'text/html' }).end(boardHtml());
     } else if (url.pathname === '/meta') {
@@ -448,7 +448,7 @@ const server = createServer(async (req, res) => {
       proxyTerm(req, res, url);
     } else if (url.pathname === '/avatar.svg') {
       const p = join(import.meta.dirname, '..', 'assets', 'marsh-avatar.svg');
-      res.writeHead(200, { 'content-type': 'image/svg+xml' }).end(existsSync(p) ? readFileSync(p) : '');
+      res.writeHead(200, { 'content-type': 'image/svg+xml', 'cache-control': 'no-cache' }).end(existsSync(p) ? readFileSync(p) : '');
     } else if (url.pathname.startsWith('/artifacts/') && req.method === 'GET') {
       const rel = decodeURIComponent(url.pathname.slice('/artifacts/'.length));
       const p = join(process.cwd(), 'artifacts', rel);
