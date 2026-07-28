@@ -1,0 +1,5 @@
+{
+ "clientId": "YOUR_LINEAR_APP_CLIENT_ID",
+ "redirectUri": "http://localhost:4643/oauth/linear/callback",
+ "posture": "provision dormant: webhooks off (until you host a receiver), client_credentials off (workspace-wide app-actor), operators act via their own Linear MCP auth"
+}

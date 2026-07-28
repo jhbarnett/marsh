@@ -33,9 +33,14 @@ repo-specific lives in `config/` (untracked in your instance); everything under
 
 ```bash
 git clone https://github.com/jhbarnett/marsh.git && cd marsh
-claude plugin marketplace add "$(pwd)"
-claude plugin install marsh@marsh
+./install.sh                 # prereqs, plugin, per-operator config, always-on board, dock app
+open ~/Applications/Marsh.app
 ```
+
+The installer expects your `config/registry.json` (copy the examples in
+`config/`) — see `TEAM_SETUP.md` for team onboarding and the app-config
+examples for GitHub/Linear identity (zero shared secrets: device-flow OAuth,
+the agent acts as its operator).
 
 Then, in a Claude Code session started from this repo:
 

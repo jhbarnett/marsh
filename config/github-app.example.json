@@ -1,0 +1,4 @@
+{
+ "clientId": "YOUR_GITHUB_APP_CLIENT_ID",
+ "note": "Create a GitHub App (permissions: contents+PRs, device flow ON, 'Expire user authorization tokens' OFF). Operators run plugins/marsh/scripts/gh_user_auth.sh once \u2014 zero shared secrets; the agent acts as its operator, never more. appId/installationId + a vaulted .pem only if you ever activate the dormant org-wide bot flow (gh_app_token.sh)."
+}
