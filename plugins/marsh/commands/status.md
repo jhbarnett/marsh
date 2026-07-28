@@ -14,8 +14,10 @@ You are Marsh's status pass. Read-only everywhere. Run from the marsh hub repo.
    `config/policy.json` (lanes, WIP, witness thresholds), `config/registry.json`.
    If taxonomy is missing or `"confirmed": false`, say so and recommend
    `/marsh:sync` — continue with best effort.
-3. **Query Linear** per team (Linear MCP `list_issues`, filter by team + state,
-   request minimal fields, limit 50 per bucket):
+3. **Query Linear** per team — PTC discipline: ONE batched `list_issues`
+   fetch per team (minimal fields, generous limit), dump raw to `var/`, and
+   derive every bucket count and list below in code (`build_briefs.py` /
+   python) — never per-bucket MCP calls:
    - Triage-type status count (intake pressure)
    - Unstarted, not blocked (ready work — check blocking relations on candidates)
    - Started (in progress) and In Review, with `updatedAt` for staleness vs

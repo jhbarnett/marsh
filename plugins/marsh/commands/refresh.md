@@ -23,7 +23,13 @@ because serve triggers it on an interval and from the board's ↻ button.
 3. Build the snapshot (active ∪ carded — see `project_cards.py` docstring),
    write `var/board-snapshot.json`, run
    `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/project_cards.py" var/board-snapshot.json --prune-done-days 7`.
-4. Output ONE line: `refreshed N cards · X moved · pruned Y` (name the moved
+4. **Parked comment-reply wakes**: for `parked_tasks` rows with
+   `wake_kind='comment_reply'` and no `woken_at`, check the referenced
+   issue/comment for replies newer than `parked_at`. Condition met →
+   `UPDATE parked_tasks SET woken_at=datetime('now') …`,
+   `project_cards.py --set <ID> gate=woken:<reason>`, and include it in the
+   output line. Wake = surface only — never dispatch work from this pass.
+5. Output ONE line: `refreshed N cards · X moved · pruned Y` (name the moved
    issues). No report, no digest, no Linear writes, no gate changes —
    reconciliation only (existing `gate`/`gateSince` semantics are preserved
    by the projector).

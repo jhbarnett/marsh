@@ -451,6 +451,34 @@ setInterval(() => {
     });
   });
 }, 300_000);
+// Parked-task wakes (Stage 2): timers and PR-merge conditions are pure code —
+// evaluated every cycle. Wake = SURFACE (db mark + card into the decision
+// queue + notification), never execute: unattended dispatch stays behind the
+// scheduled-shift gate. comment_reply conditions live in /marsh:refresh.
+function wakeCheck() {
+  execFile('sqlite3', ['-json', 'var/marsh.db',
+    "SELECT issue_id, wake_kind, wake_ref, reason FROM parked_tasks WHERE woken_at IS NULL AND wake_kind IN ('timer','pr_merged')"],
+    { cwd: process.cwd() }, (err, out) => {
+      if (err || !out?.trim()) return;
+      let rows; try { rows = JSON.parse(out); } catch { return; }
+      for (const r of rows) {
+        const wake = () => {
+          execFile('sqlite3', ['var/marsh.db', `UPDATE parked_tasks SET woken_at = datetime('now') WHERE issue_id = '${r.issue_id.replace(/'/g, '')}'`], { cwd: process.cwd() }, () => {});
+          execFile('python3', ['plugins/marsh/scripts/project_cards.py', '--set', r.issue_id, `gate=woken:${r.reason}`], { cwd: process.cwd() }, () => {});
+          execFile('osascript', ['-e', `display notification "${r.issue_id} wake condition met (${r.wake_kind})" with title "Marsh"`], () => {});
+          console.log(`woke ${r.issue_id} (${r.wake_kind})`);
+        };
+        if (r.wake_kind === 'timer' && r.wake_ref && Date.parse(r.wake_ref) <= Date.now()) wake();
+        else if (r.wake_kind === 'pr_merged' && r.wake_ref) {
+          execFile('gh', ['pr', 'view', r.wake_ref, '--json', 'state'], { cwd: process.cwd() }, (e, o) => {
+            try { if (!e && JSON.parse(o).state === 'MERGED') wake(); } catch { /* skip */ }
+          });
+        }
+      }
+    });
+}
+setInterval(wakeCheck, 300_000);
+setTimeout(wakeCheck, 15_000);
 
 let debounce;
 if (existsSync(CARDS_DIR))
