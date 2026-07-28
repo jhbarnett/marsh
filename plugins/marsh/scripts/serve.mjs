@@ -404,6 +404,17 @@ function sse(event, data) {
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   clients.forEach((r) => r.write(payload));
 }
+// Self-updating service: when running under launchd (KeepAlive), exit on our
+// own code changing — launchd revives us on the new code. Manual runs are
+// left alone (no supervisor to revive them).
+if ((process.env.XPC_SERVICE_NAME ?? '').includes('com.marsh.serve')) {
+  let selfDebounce;
+  watch(import.meta.filename, () => {
+    clearTimeout(selfDebounce);
+    selfDebounce = setTimeout(() => { console.log('serve.mjs changed — exiting for launchd to revive on new code'); process.exit(0); }, 1500);
+  });
+}
+
 let debounce;
 if (existsSync(CARDS_DIR))
   watch(CARDS_DIR, () => {
