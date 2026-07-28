@@ -323,10 +323,7 @@ clones, runs `/marsh sync`, fills `registry.json`, and tunes `policy.json`.
   stations only); event-driven wakes for parked_tasks (webhook/file-watch
   instead of shift-start polling); quarterly re-check of the Managed Agents
   platform (outcome graders, version pinning, memory stores are becoming
-  hosted primitives — shed hand-rolled layers as the platform absorbs them);
-  serve v2 cockpit: an Agent-SDK-hosted operator session embedded in the
-  board — streaming conversation with an input box (not just the v1
-  read-only tail), card drag-in as first-class context, terminal optional.
+  hosted primitives — shed hand-rolled layers as the platform absorbs them).
 
 ## 9. Research appendix
 
