@@ -11,6 +11,7 @@ import { connect as netConnect } from 'node:net';
 import { readFileSync, writeFileSync, readdirSync, watch, existsSync, mkdirSync } from 'node:fs';
 import { join, basename, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 
 const args = process.argv.slice(2);
 const flag = (name, dflt) => {
@@ -23,6 +24,7 @@ const TERM_URL = flag('term', 'http://127.0.0.1:4644');
 const TERM_HOST = new URL(TERM_URL).hostname;
 const TERM_PORT = Number(new URL(TERM_URL).port || 80);
 const TMUX = flag('tmux', 'marsh');
+const WORK_TOKEN = randomBytes(16).toString('hex'); // per-boot CSRF token for /work dispatch
 
 // Key shim injected into the proxied ttyd page (same-origin via /term/).
 // - Shift+Enter → bracketed-paste "\n": Claude Code inserts a newline
@@ -472,6 +474,30 @@ const server = createServer(async (req, res) => {
       const { file, text } = await body(req);
       writeReply(file, text ?? '');
       res.writeHead(200, { 'content-type': 'application/json' }).end('{"ok":true}');
+    } else if (url.pathname === '/work' && req.method === 'GET') {
+      const prompt = url.searchParams.get('prompt') ?? '';
+      const id = prompt.match(/[A-Z]+-\d+/)?.[0] ?? 'issue';
+      res.writeHead(200, { 'content-type': 'text/html' }).end(`<!doctype html><meta charset="utf-8"><title>marsh dispatch</title>
+<style>:root{${cssVars(loadTheme().dark)}}@media (prefers-color-scheme: light){:root{${cssVars(loadTheme().light)}}}
+body{font:14px/1.5 -apple-system,sans-serif;background:var(--bg);color:var(--fg);max-width:640px;margin:8vh auto;padding:0 20px}
+pre{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;white-space:pre-wrap;max-height:40vh;overflow-y:auto}
+button{background:var(--ok);color:var(--bg);border:0;border-radius:6px;padding:10px 22px;font-size:14px;cursor:pointer}</style>
+<h2>Dispatch ${esc(id)} to Marsh</h2>
+<pre>${esc(prompt.slice(0, 2000))}</pre>
+<form method="POST" action="/work"><input type="hidden" name="token" value="${WORK_TOKEN}"><input type="hidden" name="prompt" value="${esc(prompt)}"><button>Dispatch station session</button></form>`);
+    } else if (url.pathname === '/work' && req.method === 'POST') {
+      let d = '';
+      req.on('data', (c) => (d += c));
+      req.on('end', () => {
+        const form = new URLSearchParams(d);
+        if (form.get('token') !== WORK_TOKEN) { res.writeHead(403).end('bad token'); return; }
+        const prompt = form.get('prompt') ?? '';
+        const id = prompt.match(/[A-Z]+-\d+/)?.[0] ?? 'issue';
+        const routed = `Route Linear issue ${id} to the correct Marsh station and run it: an approved plan on a committed (Todo) issue means the /marsh:build contract; otherwise /marsh:plan. Honor every gate — this click is dispatch, not approval. Linear issue prompt follows.\n\n${prompt}`;
+        const claudeBin = existsSync(join(process.env.HOME ?? '', '.local/bin/claude')) ? join(process.env.HOME, '.local/bin/claude') : 'claude';
+        execFile(claudeBin, ['--bg', '--name', `marsh-${id}`, routed], { cwd: process.cwd() }, () => {});
+        res.writeHead(200, { 'content-type': 'text/html' }).end(`<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="2;url=/"><body style="font:14px -apple-system,sans-serif;background:#1A2420;color:#E8DFD0;display:grid;place-items:center;height:100vh"><div>dispatched <b>marsh-${esc(id)}</b> — returning to the board…</div>`);
+      });
     } else if (url.pathname === '/up' && req.method === 'POST') {
       // Self-heal from the PWA window: bring up tmux/claude/ttyd (idempotent).
       execFile('sh', [join(import.meta.dirname, 'marsh-up.sh')], { env: { ...process.env, MARSH_NO_OPEN: '1' } }, (err, stdout) => {
